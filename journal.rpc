@@ -1,0 +1,15 @@
+model CreateJournalEntryCommand {
+    name    string
+    details string optional
+    date    date   optional
+}
+
+model JournalEntry {
+    id      uuid
+    name    string
+    details string   optional
+    date    date     optional
+    tags    string[]
+}
+
+rpc CreateJournalEntry(CreateJournalEntryCommand) JournalEntry
