@@ -19,7 +19,7 @@ const (
 type Type struct {
 	Name    string
 	Variant TypeVariant
-	Fields  map[string]Field
+	Fields  map[string]*Field
 }
 
 type Field struct {
@@ -56,16 +56,32 @@ func (c *Compiler) Compile(input io.Reader) (*Service, error) {
 	}
 
 	service := new(Service)
+	service.types = c.getDefinedTypes(def)
+	service.rpc = c.getRpcs(def)
+	return service, nil
+}
 
+func (c *Compiler) getRpcs(def parser.ServiceDefinition) map[string]Rpc {
+	rpcs := make(map[string]Rpc)
+
+	for _, rpc := range def.Rpc {
+		_, exists := rpcs[rpc.Name]
+		if exists {
+			err := fmt.Errorf("")
+			c.Errors = append(c.Errors, err)
+		}
+	}
 }
 
 var ErrMultipleSymbolDefinition = errors.New("symbol defined multiple times")
+var ErrUndefinedSymbol = errors.New("the symbol has not been defined")
 
 func (c *Compiler) getDefinedTypes(sd parser.ServiceDefinition) map[string]Type {
 	typeMap := make(map[string]Type)
 
 	c.addBuiltInTypes(&typeMap)
 	c.addCustomTypes(&sd, &typeMap)
+	c.resolveTypeReferences(&typeMap)
 
 	return typeMap
 }
@@ -79,7 +95,7 @@ func (c *Compiler) addCustomTypes(sd *parser.ServiceDefinition, typeMap *map[str
 			continue
 		}
 
-		fields := make(map[string]Field)
+		fields := make(map[string]*Field)
 		for _, field := range model.Fields {
 			_, found := fields[field.Name]
 			if found {
@@ -87,13 +103,14 @@ func (c *Compiler) addCustomTypes(sd *parser.ServiceDefinition, typeMap *map[str
 				c.Errors = append(c.Errors, err)
 				continue
 			}
-			fields[field.Name] = Field{
-				Type: Type{
-					Name:    field.TypeName,
-					Variant: TypeVariantReference,
-				},
-				Optional: field.Optional,
+
+			f := new(Field)
+			f.Type = Type{
+				Name:    field.TypeName,
+				Variant: TypeVariantReference,
 			}
+			f.Optional = field.Optional
+			fields[field.Name] = f
 		}
 		(*typeMap)[model.Name] = Type{
 			Name:    model.Name,
@@ -104,31 +121,47 @@ func (c *Compiler) addCustomTypes(sd *parser.ServiceDefinition, typeMap *map[str
 }
 
 func (c *Compiler) resolveTypeReferences(typeMap *map[string]Type) {
-	for name, ty := range *typeMap {
-		if ty.Variant == TypeVariantReference {
-			t, found := (*typeMap)[ty.Name]
-			if found {
+	for _, ty := range *typeMap {
+		if ty.Variant == TypeVariantObject {
+			c.resolveObjectFieldTypeReferences(ty, typeMap)
+		}
+	}
+}
 
+func (c *Compiler) resolveObjectFieldTypeReferences(ty Type, typeMap *map[string]Type) {
+	for fieldName, fieldType := range ty.Fields {
+		if fieldType.Type.Variant == TypeVariantReference {
+			resolvedTy, found := (*typeMap)[fieldType.Type.Name]
+			if found {
+				fieldType.Type = resolvedTy
+			} else {
+				err := fmt.Errorf(
+					"unknown type '%s' in '%s.%s': %w",
+					fieldType.Type.Name,
+					ty.Name,
+					fieldName,
+					ErrUndefinedSymbol)
+				c.Errors = append(c.Errors, err)
 			}
 		}
 	}
 }
 
-func resolveTypeReference(ty Type, typeMap *map[string]Type) {
-
-}
-
 func (c *Compiler) addBuiltInTypes(m *map[string]Type) {
-	(*m)["bool"] = Scalar{
-		name: "bool",
+	(*m)["bool"] = Type{
+		Name:    "bool",
+		Variant: TypeVariantScalar,
 	}
-	(*m)["int"] = Scalar{
-		name: "int",
+	(*m)["int"] = Type{
+		Name:    "int",
+		Variant: TypeVariantScalar,
 	}
-	(*m)["float"] = Scalar{
-		name: "float",
+	(*m)["float"] = Type{
+		Name:    "float",
+		Variant: TypeVariantScalar,
 	}
-	(*m)["string"] = Scalar{
-		name: "string",
+	(*m)["string"] = Type{
+		Name:    "string",
+		Variant: TypeVariantScalar,
 	}
 }

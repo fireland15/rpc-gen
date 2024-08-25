@@ -1,17 +1,31 @@
 package main
 
-func main() {
-	// r, err := os.Open("journal.rpc")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// _, err := parser.NewTokenizer(r)
-	// if err != nil {
-	// 	panic(err)
-	// }
+import (
+	"fmt"
+	"strings"
 
-	// tokens := t.Next()
-	// for _, tok := range tokens {
-	// 	fmt.Printf("%s: %d-%d\n", tok.Text, tok.Span.Start.Offset, tok.Span.End.Offset)
-	// }
+	"github.com/fireland15/rpc-gen/compiler"
+)
+
+func main() {
+	source := `
+model User {
+	username string
+	userId int
+	email string optional
+}
+	
+model UserPage {
+	start int optional
+	end int
+	users User
+}`
+
+	c := compiler.Compiler{}
+	service, err := c.Compile(strings.NewReader(source))
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("%v", service)
 }
