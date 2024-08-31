@@ -34,8 +34,8 @@ type Rpc struct {
 }
 
 type Service struct {
-	rpc   map[string]Rpc
-	types map[string]Type
+	Rpc   map[string]Rpc
+	Types map[string]Type
 }
 
 type Compiler struct {
@@ -56,21 +56,49 @@ func (c *Compiler) Compile(input io.Reader) (*Service, error) {
 	}
 
 	service := new(Service)
-	service.types = c.getDefinedTypes(def)
-	service.rpc = c.getRpcs(def)
+	service.Types = c.getDefinedTypes(def)
+	service.Rpc = c.getRpcs(def, &service.Types)
 	return service, nil
 }
 
-func (c *Compiler) getRpcs(def parser.ServiceDefinition) map[string]Rpc {
+func (c *Compiler) getRpcs(def parser.ServiceDefinition, typeMap *map[string]Type) map[string]Rpc {
 	rpcs := make(map[string]Rpc)
 
 	for _, rpc := range def.Rpc {
 		_, exists := rpcs[rpc.Name]
 		if exists {
-			err := fmt.Errorf("")
+			err := fmt.Errorf("rpc '%s' defined multiple times: %w", rpc.Name, ErrMultipleSymbolDefinition)
 			c.Errors = append(c.Errors, err)
 		}
+
+		r := Rpc{
+			Name: rpc.Name,
+		}
+
+		if len(rpc.RequestTypeName) > 0 {
+			ty, found := (*typeMap)[rpc.RequestTypeName]
+			if !found {
+				err := fmt.Errorf("type '%s' is undefined: %w", rpc.RequestTypeName, ErrUndefinedSymbol)
+				c.Errors = append(c.Errors, err)
+			} else {
+				r.RequestType = &ty
+			}
+		}
+
+		if len(rpc.ResponseTypeName) > 0 {
+			ty, found := (*typeMap)[rpc.ResponseTypeName]
+			if !found {
+				err := fmt.Errorf("type '%s' is undefined: %w", rpc.ResponseTypeName, ErrUndefinedSymbol)
+				c.Errors = append(c.Errors, err)
+			} else {
+				r.ResponseType = &ty
+			}
+		}
+
+		rpcs[rpc.Name] = r
 	}
+
+	return rpcs
 }
 
 var ErrMultipleSymbolDefinition = errors.New("symbol defined multiple times")
