@@ -8,8 +8,16 @@ type {{ .Name }} = { {{range $key, $value := .Fields}}
 {{.Name}}({{with .RequestType}}request: {{.Name}}{{end}}): Promise<{{if .ResponseType}}{{.ResponseType.Name}}{{else}}void{{end}}>
 {{- end}}
 
+{{- define "client-impl" -}}
+class ServiceClient implements IServiceClient {
+    
+}
+{{- end -}}
+
 {{- range .Types}}{{if eq .Variant 1}}{{template "model" .}}
 
 {{end}}{{end}}interface IServiceClient { {{range .Rpc}}
     {{template "rpc-interface" .}}{{end}}
 }
+
+{{template "client-impl" -}}

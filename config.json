@@ -1,0 +1,9 @@
+{
+    "clients": {
+        "typescript": {
+            "types": {
+                "int": "number"
+            }
+        }
+    }
+}

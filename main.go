@@ -6,6 +6,7 @@ import (
 	"text/template"
 
 	"github.com/fireland15/rpc-gen/compiler"
+	"github.com/fireland15/rpc-gen/writer"
 )
 
 func main() {
@@ -36,11 +37,24 @@ rpc PingUser(int)`
 		panic(err)
 	}
 
+	cfgas, err := writer.ReadConfig("config.json")
+	if err != nil {
+		panic(err)
+	}
+
+	print(cfgas)
+
 	templ, err := template.New("ts-api").ParseFiles("ts_client.template")
 	if err != nil {
 		panic(err)
 	}
-	err = templ.ExecuteTemplate(os.Stdout, "ts_client.template", service)
+
+	f, err := os.OpenFile("service_client.ts", os.O_CREATE, 0)
+	if err != nil {
+		panic(err)
+	}
+
+	err = templ.ExecuteTemplate(f, "ts_client.template", service)
 	if err != nil {
 		panic(err)
 	}
