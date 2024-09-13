@@ -2,6 +2,7 @@
   "definition": "./journal.rpc",
   "clients": {
     "typescript": {
+      "output": "./out/service_client.gen.ts",
       "types": {
         "uuid": "string",
         "date": "string"
@@ -9,7 +10,8 @@
     }
   },
   "servers": {
-    "go": {
+    "go-echo": {
+      "output": "./out/server.go",
       "package": "main",
       "types": {
         "uuid": {

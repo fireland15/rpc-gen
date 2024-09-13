@@ -1,18 +1,19 @@
-package writer
+package generators
 
 import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io"
+	"os"
+	"path/filepath"
 	"text/template"
 
 	"github.com/fireland15/rpc-gen/internal/compiler"
-	"github.com/fireland15/rpc-gen/internal/config"
 	"github.com/iancoleman/strcase"
 )
 
 type GoServerConfig struct {
+	Output  string `json:"output"`
 	Package string `json:"package"`
 	Types   map[string]struct {
 		Package   string `json:"package"`
@@ -21,9 +22,8 @@ type GoServerConfig struct {
 	} `json:"types"`
 }
 
-type GoServerWriter struct {
+type GoEchoServerGenerator struct {
 	config   GoServerConfig
-	output   io.Writer
 	template *template.Template
 }
 
@@ -81,25 +81,17 @@ type goServiceDescriptor struct {
 //go:embed go_echo_server.tmpl
 var go_server_template string
 
-func NewGoServerWriter(config *config.RpcGenConfig, output io.Writer) (ServerWriter, error) {
+func NewGoEchoServerGenerator(config json.RawMessage) (CodeGenerator, error) {
 	if config == nil {
 		panic("config is nil")
 	}
-	if output == nil {
-		panic("output is nil")
+
+	c := new(GoEchoServerGenerator)
+
+	err := json.Unmarshal(config, &c.config)
+	if err != nil {
+		return nil, err
 	}
-
-	c := new(GoServerWriter)
-
-	rawConfig, found := config.Servers["go"]
-	if found {
-		err := json.Unmarshal(rawConfig, &c.config)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	c.output = output
 
 	tmpl, err := template.New("test").Parse(go_server_template)
 	if err != nil {
@@ -110,12 +102,12 @@ func NewGoServerWriter(config *config.RpcGenConfig, output io.Writer) (ServerWri
 	return c, nil
 }
 
-func (w *GoServerWriter) Write(service *compiler.Service) error {
+func (g *GoEchoServerGenerator) Generate(service *compiler.Service) error {
 	desc := goServiceDescriptor{
-		Package: w.config.Package,
+		Package: g.config.Package,
 	}
 
-	for _, t := range w.config.Types {
+	for _, t := range g.config.Types {
 		desc.Imports = append(desc.Imports, t.Package)
 	}
 
@@ -130,7 +122,7 @@ func (w *GoServerWriter) Write(service *compiler.Service) error {
 					JsonName: strcase.ToLowerCamel(name),
 				}
 				typename := f.Type.Name
-				importedType, found := w.config.Types[typename]
+				importedType, found := g.config.Types[typename]
 				if found {
 					typename = fmt.Sprintf("%s.%s", importedType.Namespace, importedType.TypeName)
 				}
@@ -161,6 +153,22 @@ func (w *GoServerWriter) Write(service *compiler.Service) error {
 		desc.Methods = append(desc.Methods, m)
 	}
 
-	w.template.Execute(w.output, desc)
+	err := os.MkdirAll(filepath.Dir(g.config.Output), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(g.config.Output)
+	if err != nil {
+		err = fmt.Errorf("problem opening '%s' (GoEchoServerGenerator): %w", g.config.Output, err)
+		return err
+	}
+	defer f.Close()
+
+	err = g.template.Execute(f, desc)
+	if err != nil {
+		err = fmt.Errorf("problem executing template (GoEchoServerGenerator): %w", err)
+		return err
+	}
 	return nil
 }
