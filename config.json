@@ -1,9 +1,28 @@
 {
-    "clients": {
-        "typescript": {
-            "types": {
-                "int": "number"
-            }
-        }
+  "definition": "./journal.rpc",
+  "clients": {
+    "typescript": {
+      "types": {
+        "uuid": "string",
+        "date": "string"
+      }
     }
+  },
+  "servers": {
+    "go": {
+      "package": "main",
+      "types": {
+        "uuid": {
+          "package": "github.com/google/uuid",
+          "namespace": "uuid",
+          "typeName": "UUID"
+        },
+        "date": {
+          "package": "time",
+          "namespace": "time",
+          "typeName": "Time"
+        }
+      }
+    }
+  }
 }

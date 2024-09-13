@@ -9,7 +9,7 @@ model JournalEntry {
     name    string
     details string   optional
     date    date     optional
-    tags    string[]
+    tags    string
 }
 
 rpc CreateJournalEntry(CreateJournalEntryCommand) JournalEntry

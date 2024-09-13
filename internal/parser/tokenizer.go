@@ -38,7 +38,7 @@ func (t *Tokenizer) Next() (Token, bool) {
 			}
 		}
 
-		if unicode.IsLetter(t.source.Current()) {
+		if unicode.IsLetter(t.source.Current()) || t.source.Current() == '_' {
 			text = append(text, t.source.Current())
 			for {
 				err := t.source.Bump()
@@ -98,7 +98,7 @@ func (t *Tokenizer) Next() (Token, bool) {
 }
 
 func isIdentifierContinue(r rune) bool {
-	return unicode.IsLetter(r) || unicode.IsNumber(r)
+	return unicode.IsLetter(r) || unicode.IsNumber(r) || r == '_'
 }
 
 type IRuneStream interface {

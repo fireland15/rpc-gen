@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/fireland15/rpc-gen/parser"
+	"github.com/fireland15/rpc-gen/internal/parser"
 )
 
 type TypeVariant int
