@@ -58,6 +58,15 @@ func (c *Compiler) Compile(input io.Reader) (*Service, error) {
 	service := new(Service)
 	service.Types = c.getDefinedTypes(def)
 	service.Rpc = c.getRpcs(def, &service.Types)
+
+	if len(c.Errors) > 0 {
+		err := errors.New("compilation errors")
+		for _, e := range c.Errors {
+			err = fmt.Errorf("%s:\n\t%w", err, e)
+		}
+		return nil, err
+	}
+
 	return service, nil
 }
 
@@ -81,7 +90,13 @@ func (c *Compiler) getRpcs(def parser.ServiceDefinition, typeMap *map[string]Typ
 				err := fmt.Errorf("type '%s' is undefined: %w", rpc.RequestTypeName, ErrUndefinedSymbol)
 				c.Errors = append(c.Errors, err)
 			} else {
-				r.RequestType = &ty
+				if ty.Variant == TypeVariantScalar {
+					err := errors.New("scalar types cannot be directly used in rpc method signatures")
+					err = fmt.Errorf("error with rpc method %s: %w", rpc.Name, err)
+					c.Errors = append(c.Errors, err)
+				} else {
+					r.RequestType = &ty
+				}
 			}
 		}
 
@@ -190,6 +205,14 @@ func (c *Compiler) addBuiltInTypes(m *map[string]Type) {
 	}
 	(*m)["string"] = Type{
 		Name:    "string",
+		Variant: TypeVariantScalar,
+	}
+	(*m)["date"] = Type{
+		Name:    "date",
+		Variant: TypeVariantScalar,
+	}
+	(*m)["uuid"] = Type{
+		Name:    "uuid",
 		Variant: TypeVariantScalar,
 	}
 }

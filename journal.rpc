@@ -4,6 +4,10 @@ model CreateJournalEntryCommand {
     date    date   optional
 }
 
+model DeleteJournalEntryCommand {
+    journalEntryId uuid
+}
+
 model JournalEntry {
     id      uuid
     name    string
@@ -13,3 +17,5 @@ model JournalEntry {
 }
 
 rpc CreateJournalEntry(CreateJournalEntryCommand) JournalEntry
+
+rpc DeleteJournalEntry(DeleteJournalEntryCommand)

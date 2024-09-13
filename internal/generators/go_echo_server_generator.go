@@ -1,11 +1,13 @@
 package generators
 
 import (
+	"cmp"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"text/template"
 
 	"github.com/fireland15/rpc-gen/internal/compiler"
@@ -111,7 +113,9 @@ func (g *GoEchoServerGenerator) Generate(service *compiler.Service) error {
 		desc.Imports = append(desc.Imports, t.Package)
 	}
 
-	for _, ty := range service.Types {
+	types := sortedKeys(service.Types)
+	for _, typeName := range types {
+		ty := service.Types[typeName]
 		if ty.Variant == compiler.TypeVariantObject {
 			s := goServiceStruct{
 				Name: ty.Name,
@@ -137,7 +141,10 @@ func (g *GoEchoServerGenerator) Generate(service *compiler.Service) error {
 		}
 	}
 
-	for _, rpc := range service.Rpc {
+	rpcNames := sortedKeys(service.Rpc)
+	for _, rpcName := range rpcNames {
+		rpc := service.Rpc[rpcName]
+
 		m := goServiceMethod{
 			Name: strcase.ToCamel(rpc.Name),
 		}
@@ -171,4 +178,15 @@ func (g *GoEchoServerGenerator) Generate(service *compiler.Service) error {
 		return err
 	}
 	return nil
+}
+
+func sortedKeys[K cmp.Ordered, V any](m map[K]V) []K {
+	keys := make([]K, len(m))
+	i := 0
+	for k := range m {
+		keys[i] = k
+		i++
+	}
+	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+	return keys
 }
