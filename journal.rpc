@@ -19,3 +19,10 @@ model JournalEntry {
 rpc CreateJournalEntry(CreateJournalEntryCommand) JournalEntry
 
 rpc DeleteJournalEntry(DeleteJournalEntryCommand)
+
+model AddCommentCommand {
+    journalEntryId uuid
+    comment string
+}
+
+rpc AddComment(AddCommentCommand)

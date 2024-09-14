@@ -123,7 +123,7 @@ func (p *Parser) parseRpcDefinition() (RpcDefinition, error) {
 
 	n, err = p.tokens.Lookahead(0)
 	if err == nil {
-		if n.Type == TokenTypeIdentifier {
+		if n.Type == TokenTypeIdentifier && n.Text != string(KwModel) && n.Text != string(KwRpc) && n.Text != string(KwOptional) {
 			def.ResponseTypeName = n.Text
 			p.tokens.Next()
 		}
