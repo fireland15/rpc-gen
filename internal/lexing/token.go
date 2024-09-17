@@ -1,4 +1,4 @@
-package parser
+package lexing
 
 import (
 	"errors"
@@ -14,6 +14,9 @@ const (
 	TokenTypeRightBracket
 	TokenTypeLeftParenthesis
 	TokenTypeRightParenthesis
+	TokenTypeLeftSquareBracket
+	TokenTypeRightSquareBracket
+	TokenTypeQuestion
 )
 
 func (tt TokenType) String() string {
@@ -24,10 +27,16 @@ func (tt TokenType) String() string {
 		return "{"
 	case TokenTypeLeftParenthesis:
 		return "("
+	case TokenTypeLeftSquareBracket:
+		return "["
 	case TokenTypeRightBracket:
 		return "}"
 	case TokenTypeRightParenthesis:
 		return ")"
+	case TokenTypeRightSquareBracket:
+		return "]"
+	case TokenTypeQuestion:
+		return "?"
 	default:
 		panic("unknown token type")
 	}
@@ -67,6 +76,12 @@ func NewToken(text string, span Span) (Token, error) {
 		t.Type = TokenTypeLeftParenthesis
 	} else if text == ")" {
 		t.Type = TokenTypeRightParenthesis
+	} else if text == "[" {
+		t.Type = TokenTypeLeftSquareBracket
+	} else if text == "]" {
+		t.Type = TokenTypeRightSquareBracket
+	} else if text == "?" {
+		t.Type = TokenTypeQuestion
 	} else {
 		err := fmt.Errorf("%s is not a recognized token: %w", text, ErrInvalidToken)
 		return t, err

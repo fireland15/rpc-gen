@@ -4,14 +4,18 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/fireland15/rpc-gen/internal/ast"
+	"github.com/fireland15/rpc-gen/internal/lexing"
+	"github.com/fireland15/rpc-gen/internal/model"
 )
 
 type Parser struct {
-	tokens *TokenStream
+	tokens *lexing.TokenStream
 }
 
 func NewParser(input io.Reader) (*Parser, error) {
-	ts, err := NewTokenStream(input)
+	ts, err := lexing.NewTokenStream(input)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +68,7 @@ func (p *Parser) Parse() (ServiceDefinition, error) {
 			break
 		}
 
-		if tok.Type != TokenTypeIdentifier {
+		if tok.Type != lexing.TokenTypeIdentifier {
 			p.tokens.Next()
 			continue
 		} else if tok.Text == string(KwModel) {
@@ -89,47 +93,73 @@ func (p *Parser) Parse() (ServiceDefinition, error) {
 	return def, err
 }
 
-func (p *Parser) parseRpcDefinition() (RpcDefinition, error) {
-	def := RpcDefinition{}
+func (p *Parser) parseRpcDefinition() (model.Method, error) {
+	method := model.Method{}
 	err := p.parseKeyword(KwRpc)
 	if err != nil {
-		return def, err
+		return method, err
 	}
 
 	rpcName, err := p.parseIdentifier()
 	if err != nil {
-		return def, err
+		return method, err
 	}
 
-	def.Name = rpcName.Text
+	method.Name = rpcName.Text
 
-	err = p.parseTokenType(TokenTypeLeftParenthesis)
+	err = p.parseTokenType(lexing.TokenTypeLeftParenthesis)
 	if err != nil {
-		return def, err
+		return method, err
 	}
 
-	n, err := p.tokens.Lookahead(0)
+	for {
+		parameter := model.MethodParameter{}
+		tok, err := p.tokens.Lookahead(0)
+		if err != nil || tok.Type != lexing.TokenTypeIdentifier {
+			break
+		}
+
+		tok, err = p.tokens.Next()
+		if err != nil {
+			panic("lookahead failed?")
+		}
+		parameter.Name = tok.Text
+
+		ty, err := p.parseType()
+		if err != nil {
+			return method, err
+		}
+		parameter.Type = ty
+	}
+
+	err = p.parseTokenType(lexing.TokenTypeRightParenthesis)
+	if err != nil {
+		return method, err
+	}
+
+	next, err := p.tokens.Lookahead(0)
 	if err == nil {
-		if n.Type == TokenTypeIdentifier {
-			def.RequestTypeName = n.Text
-			p.tokens.Next()
+		if next.Type == lexing.TokenTypeIdentifier && !isKeyword(next.Text) {
+			ty, err := p.parseType()
+			if err != nil {
+				return method, err
+			}
+			method.ReturnType = &ty
 		}
 	}
 
-	err = p.parseTokenType(TokenTypeRightParenthesis)
+	return method, nil
+}
+
+func (p *Parser) parseType() (model.Type, error) {
+	ty := model.Type{}
+
+	name, err := p.parseIdentifier()
 	if err != nil {
-		return def, err
+		return ty, err
 	}
 
-	n, err = p.tokens.Lookahead(0)
-	if err == nil {
-		if n.Type == TokenTypeIdentifier && n.Text != string(KwModel) && n.Text != string(KwRpc) && n.Text != string(KwOptional) {
-			def.ResponseTypeName = n.Text
-			p.tokens.Next()
-		}
-	}
-
-	return def, nil
+	ty.Name = name
 }
 
 func (p *Parser) parseModelDefinition() (ModelDefinition, error) {
@@ -174,7 +204,7 @@ func (p *Parser) canParseModelFieldDefinition() bool {
 		return false
 	}
 
-	if t.Type != TokenTypeIdentifier {
+	if t.Type != lexing.TokenTypeIdentifier {
 		return false
 	}
 
@@ -202,7 +232,7 @@ func (p *Parser) parseModelFieldDefinition() (FieldDefinition, error) {
 		return definition, nil
 	}
 
-	if t.Type != TokenTypeIdentifier || t.Text != string(KwOptional) {
+	if t.Type != lexing.TokenTypeIdentifier || t.Text != string(KwOptional) {
 		return definition, nil
 	}
 
@@ -217,14 +247,14 @@ func (p *Parser) parseModelFieldDefinition() (FieldDefinition, error) {
 }
 
 func (p *Parser) parseLeftBracket() error {
-	return p.parseTokenType(TokenTypeLeftBracket)
+	return p.parseTokenType(lexing.TokenTypeLeftBracket)
 }
 
 func (p *Parser) parseRightBracket() error {
-	return p.parseTokenType(TokenTypeRightBracket)
+	return p.parseTokenType(lexing.TokenTypeRightBracket)
 }
 
-func (p *Parser) parseTokenType(tt TokenType) error {
+func (p *Parser) parseTokenType(tt lexing.TokenType) error {
 	t, err := p.tokens.Next()
 	if err != nil {
 		return err
@@ -238,16 +268,22 @@ func (p *Parser) parseTokenType(tt TokenType) error {
 	return nil
 }
 
-func (p *Parser) parseIdentifier() (Token, error) {
+func (p *Parser) parseIdentifier() (ast.Identifier, error) {
+	ident := ast.Identifier{}
+
 	t, err := p.tokens.Next()
 	if err != nil {
-		return Token{}, err
+		return ident, err
 	}
-	if t.Type != TokenTypeIdentifier {
+	if t.Type != lexing.TokenTypeIdentifier {
 		err = fmt.Errorf("expected identifier, but found \"%s\": %w", t.Text, ErrUnexpectedToken)
-		return Token{}, err
+		return ident, err
 	}
-	return t, nil
+
+	ident.Name = t.Text
+	ident.Span = t.Span
+
+	return ident, nil
 }
 
 func (p *Parser) parseKeyword(kw Keyword) error {
@@ -255,7 +291,7 @@ func (p *Parser) parseKeyword(kw Keyword) error {
 	if err != nil {
 		return err
 	}
-	if t.Type != TokenTypeIdentifier {
+	if t.Type != lexing.TokenTypeIdentifier {
 		err = fmt.Errorf("expected keyword \"%s\", but found \"%s\": %w", kw, t.Text, ErrUnexpectedToken)
 		return err
 	}
@@ -264,4 +300,8 @@ func (p *Parser) parseKeyword(kw Keyword) error {
 		return err
 	}
 	return nil
+}
+
+func isKeyword(str string) bool {
+	return str == string(KwModel) || str == string(KwRpc) || str == string(KwOptional)
 }

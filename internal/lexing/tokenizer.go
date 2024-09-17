@@ -1,4 +1,4 @@
-package parser
+package lexing
 
 import (
 	"bufio"
@@ -89,6 +89,30 @@ func (t *Tokenizer) Next() (Token, bool) {
 			return Token{
 				Type: TokenTypeRightParenthesis,
 				Text: ")",
+			}, err != nil
+		}
+
+		if t.source.Current() == '[' {
+			err := t.source.Bump()
+			return Token{
+				Type: TokenTypeLeftSquareBracket,
+				Text: "[",
+			}, err != nil
+		}
+
+		if t.source.Current() == ']' {
+			err := t.source.Bump()
+			return Token{
+				Type: TokenTypeRightSquareBracket,
+				Text: "]",
+			}, err != nil
+		}
+
+		if t.source.Current() == '?' {
+			err := t.source.Bump()
+			return Token{
+				Type: TokenTypeQuestion,
+				Text: "?",
 			}, err != nil
 		}
 
