@@ -30,13 +30,6 @@ func Compile(definitionPath string, config *config.RpcGenConfig) error {
 		return err
 	}
 
-	f, err := os.Create("parsed.txt")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	fmt.Fprintf(f, "%v", service)
-
 	errs := make([]string, 0)
 	analysis.GenerateMethodParameterModels(&service)
 	analysis.CheckTypeReferences(&errs, service)
