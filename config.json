@@ -5,7 +5,8 @@
       "output": "./out/service_client.gen.ts",
       "types": {
         "uuid": "string",
-        "date": "string"
+        "date": "string",
+        "int": "number"
       }
     }
   },

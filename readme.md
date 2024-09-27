@@ -18,10 +18,10 @@ Definition files describe the interface between clients and servers. RPC-Gen tra
 The primary part of a definition file is a RPC statement. It looks something like:
 
 ```
-rpc AssignUser(AssignUserRequest) AssignUserResponse
+rpc AssignUser(request AssignUserRequest) AssignUserResponse
 ```
 
-The `rpc` keyword indicates the statement is for an RPC method. Then, the name of the method, its arguments, and finally the return value. Both the argument type and return value are optional.
+The `rpc` keyword indicates the statement is for an RPC method. Then, the name of the method, its parameters, and finally the return value. The return value can be omitted.
 
 The definition file also defines the data models of the service. For example:
 
@@ -29,7 +29,8 @@ The definition file also defines the data models of the service. For example:
 model AssignUserRequest {
     userId    uuid
     projectId uuid
-    makeOwner bool optional
+    makeOwner bool?
+    tags      string[]
 }
 ```
 

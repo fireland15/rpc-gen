@@ -17,6 +17,7 @@ const (
 	TokenTypeLeftSquareBracket
 	TokenTypeRightSquareBracket
 	TokenTypeQuestion
+	TokenTypeComma
 )
 
 func (tt TokenType) String() string {
@@ -37,6 +38,8 @@ func (tt TokenType) String() string {
 		return "]"
 	case TokenTypeQuestion:
 		return "?"
+	case TokenTypeComma:
+		return ","
 	default:
 		panic("unknown token type")
 	}

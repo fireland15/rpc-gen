@@ -18,7 +18,7 @@ type ServerConfig struct {
 
 type RpcGenConfig struct {
 	RpcDefinitionFile string                     `json:"definition"`
-	Clients           map[string]ClientConfig    `json:"clients"`
+	Clients           map[string]json.RawMessage `json:"clients"`
 	Servers           map[string]json.RawMessage `json:"servers"`
 }
 

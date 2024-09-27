@@ -1,16 +1,16 @@
 package generators
 
 import (
-	"cmp"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
+	"strings"
 	"text/template"
 
-	"github.com/fireland15/rpc-gen/internal/compiler"
+	"github.com/fireland15/rpc-gen/internal/model"
 	"github.com/iancoleman/strcase"
 )
 
@@ -29,57 +29,6 @@ type GoEchoServerGenerator struct {
 	template *template.Template
 }
 
-type goServiceStructField struct {
-	Name     string
-	Type     string
-	JsonName string
-}
-
-type goServiceStruct struct {
-	Name   string
-	Fields []goServiceStructField
-}
-
-type goServiceMethod struct {
-	Path        string
-	Name        string
-	RequestType string
-	ReturnType  string
-}
-
-func (m goServiceMethod) Signature() string {
-	params := ""
-	if len(m.RequestType) > 0 {
-		params = fmt.Sprintf("request *%s", m.RequestType)
-	}
-
-	response := "error"
-	if len(m.ReturnType) > 0 {
-		response = fmt.Sprintf("(%s, error)", m.ReturnType)
-	}
-
-	return fmt.Sprintf("%s(%s) %s", m.Name, params, response)
-}
-
-func (m goServiceMethod) HasParameters() bool {
-	return len(m.RequestType) > 0
-}
-
-func (m goServiceMethod) HasResponse() bool {
-	return len(m.ReturnType) > 0
-}
-
-func (m goServiceMethod) GetPath() string {
-	return strcase.ToSnake(m.Name)
-}
-
-type goServiceDescriptor struct {
-	Package string
-	Imports []string
-	Structs []goServiceStruct
-	Methods []goServiceMethod
-}
-
 //go:embed go_echo_server.tmpl
 var go_server_template string
 
@@ -95,7 +44,38 @@ func NewGoEchoServerGenerator(config json.RawMessage) (CodeGenerator, error) {
 		return nil, err
 	}
 
-	tmpl, err := template.New("test").Parse(go_server_template)
+	funcs := make(template.FuncMap, 0)
+	funcs["toCamel"] = strcase.ToCamel
+	funcs["toLowerCamel"] = strcase.ToLowerCamel
+	funcs["toSignature"] = func(m model.Method) string {
+		params := make([]string, len(m.Parameters))
+		for idx, p := range m.Parameters {
+			params[idx] = fmt.Sprintf("%s %s", p.Name, c.resolveType(p.Type))
+		}
+
+		returnType := "error"
+		if m.ReturnType != nil {
+			returnType = fmt.Sprintf("(%s, error)", c.resolveType(*m.ReturnType))
+		}
+
+		return fmt.Sprintf("%s(%s) %s", m.Name, strings.Join(params, ", "), returnType)
+	}
+	funcs["joinParameters"] = func(m model.Method) string {
+		params := make([]string, len(m.Parameters))
+		for idx, p := range m.Parameters {
+			params[idx] = fmt.Sprintf("params.%s", strcase.ToCamel(p.Name))
+		}
+		return strings.Join(params, ", ")
+	}
+	funcs["hasParameters"] = func(m model.Method) bool {
+		return len(m.Parameters) > 0
+	}
+	funcs["hasReturnValue"] = func(m model.Method) bool {
+		return m.ReturnType != nil
+	}
+	funcs["resolveType"] = c.resolveType
+
+	tmpl, err := template.New("go-echo").Funcs(funcs).Parse(go_server_template)
 	if err != nil {
 		return nil, err
 	}
@@ -104,62 +84,25 @@ func NewGoEchoServerGenerator(config json.RawMessage) (CodeGenerator, error) {
 	return c, nil
 }
 
-func (g *GoEchoServerGenerator) Generate(service *compiler.Service) error {
-	desc := goServiceDescriptor{
-		Package: g.config.Package,
-	}
-
-	for _, t := range g.config.Types {
-		desc.Imports = append(desc.Imports, t.Package)
-	}
-
-	types := sortedKeys(service.Types)
-	for _, typeName := range types {
-		ty := service.Types[typeName]
-		if ty.Variant == compiler.TypeVariantObject {
-			s := goServiceStruct{
-				Name: ty.Name,
-			}
-			for name, f := range ty.Fields {
-				field := goServiceStructField{
-					Name:     strcase.ToCamel(name),
-					JsonName: strcase.ToLowerCamel(name),
-				}
-				typename := f.Type.Name
-				importedType, found := g.config.Types[typename]
-				if found {
-					typename = fmt.Sprintf("%s.%s", importedType.Namespace, importedType.TypeName)
-				}
-				if f.Optional {
-					field.Type = fmt.Sprintf("*%s", typename)
-				} else {
-					field.Type = typename
-				}
-				s.Fields = append(s.Fields, field)
-			}
-			desc.Structs = append(desc.Structs, s)
+func (g *GoEchoServerGenerator) resolveType(typeName model.Type) string {
+	if typeName.Variant == model.TypeVariantNamed {
+		typeConfig, found := g.config.Types[typeName.Name]
+		if !found {
+			return typeName.Name
 		}
+		return fmt.Sprintf("%s.%s", typeConfig.Namespace, typeConfig.TypeName)
+	} else if typeName.Variant == model.TypeVariantOptional {
+		inner := g.resolveType(*typeName.Inner)
+		return fmt.Sprintf("*%s", inner)
+	} else if typeName.Variant == model.TypeVariantArray {
+		inner := g.resolveType(*typeName.Inner)
+		return fmt.Sprintf("[]%s", inner)
+	} else {
+		panic("unreachable")
 	}
+}
 
-	rpcNames := sortedKeys(service.Rpc)
-	for _, rpcName := range rpcNames {
-		rpc := service.Rpc[rpcName]
-
-		m := goServiceMethod{
-			Name: strcase.ToCamel(rpc.Name),
-		}
-
-		if rpc.RequestType != nil {
-			m.RequestType = rpc.RequestType.Name
-		}
-
-		if rpc.ResponseType != nil {
-			m.ReturnType = rpc.ResponseType.Name
-		}
-
-		desc.Methods = append(desc.Methods, m)
-	}
-
+func (g *GoEchoServerGenerator) Generate(service *model.ServiceDefinition) error {
 	err := os.MkdirAll(filepath.Dir(g.config.Output), os.ModePerm)
 	if err != nil {
 		return err
@@ -172,21 +115,51 @@ func (g *GoEchoServerGenerator) Generate(service *compiler.Service) error {
 	}
 	defer f.Close()
 
-	err = g.template.Execute(f, desc)
+	_, err = fmt.Fprintln(f, "// This file is autogenerated. Any changes will be overwritten when regenerated.")
 	if err != nil {
-		err = fmt.Errorf("problem executing template (GoEchoServerGenerator): %w", err)
 		return err
 	}
-	return nil
-}
 
-func sortedKeys[K cmp.Ordered, V any](m map[K]V) []K {
-	keys := make([]K, len(m))
-	i := 0
-	for k := range m {
-		keys[i] = k
-		i++
+	_, err = fmt.Fprintf(f, "package %s\n\n", g.config.Package)
+	if err != nil {
+		return err
 	}
-	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
-	return keys
+
+	imports := make([]string, 0)
+	for _, t := range g.config.Types {
+		if !slices.Contains(imports, t.Package) {
+			imports = append(imports, t.Package)
+		}
+	}
+
+	err = g.template.ExecuteTemplate(f, "imports", imports)
+	if err != nil {
+		return err
+	}
+
+	for _, m := range service.Models {
+		err = g.template.ExecuteTemplate(f, "model", m)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = g.template.ExecuteTemplate(f, "service_interface", service)
+	if err != nil {
+		return err
+	}
+
+	err = g.template.ExecuteTemplate(f, "handler", service)
+	if err != nil {
+		return err
+	}
+
+	for _, m := range service.Methods {
+		err = g.template.ExecuteTemplate(f, "handler_func", m)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

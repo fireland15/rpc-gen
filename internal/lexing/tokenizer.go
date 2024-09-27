@@ -40,12 +40,17 @@ func (t *Tokenizer) Next() (Token, bool) {
 
 		if unicode.IsLetter(t.source.Current()) || t.source.Current() == '_' {
 			text = append(text, t.source.Current())
+			start := t.source.Position()
 			for {
 				err := t.source.Bump()
 				if err != nil {
 					return Token{
 						Type: TokenTypeIdentifier,
 						Text: string(text),
+						Span: Span{
+							Start: start,
+							End:   t.source.Position(),
+						},
 					}, true
 				}
 
@@ -53,6 +58,10 @@ func (t *Tokenizer) Next() (Token, bool) {
 					return Token{
 						Type: TokenTypeIdentifier,
 						Text: string(text),
+						Span: Span{
+							Start: start,
+							End:   t.source.Position(),
+						},
 					}, false
 				}
 
@@ -61,58 +70,106 @@ func (t *Tokenizer) Next() (Token, bool) {
 		}
 
 		if t.source.Current() == '{' {
+			start := t.source.Position()
 			err := t.source.Bump()
 			return Token{
 				Type: TokenTypeLeftBracket,
 				Text: "{",
+				Span: Span{
+					Start: start,
+					End:   start,
+				},
 			}, err != nil
 		}
 
 		if t.source.Current() == '}' {
+			start := t.source.Position()
 			err := t.source.Bump()
 			return Token{
 				Type: TokenTypeRightBracket,
 				Text: "}",
+				Span: Span{
+					Start: start,
+					End:   start,
+				},
 			}, err != nil
 		}
 
 		if t.source.Current() == '(' {
+			start := t.source.Position()
 			err := t.source.Bump()
 			return Token{
 				Type: TokenTypeLeftParenthesis,
 				Text: "(",
+				Span: Span{
+					Start: start,
+					End:   start,
+				},
 			}, err != nil
 		}
 
 		if t.source.Current() == ')' {
+			start := t.source.Position()
 			err := t.source.Bump()
 			return Token{
 				Type: TokenTypeRightParenthesis,
 				Text: ")",
+				Span: Span{
+					Start: start,
+					End:   start,
+				},
 			}, err != nil
 		}
 
 		if t.source.Current() == '[' {
+			start := t.source.Position()
 			err := t.source.Bump()
 			return Token{
 				Type: TokenTypeLeftSquareBracket,
 				Text: "[",
+				Span: Span{
+					Start: start,
+					End:   start,
+				},
 			}, err != nil
 		}
 
 		if t.source.Current() == ']' {
+			start := t.source.Position()
 			err := t.source.Bump()
 			return Token{
 				Type: TokenTypeRightSquareBracket,
 				Text: "]",
+				Span: Span{
+					Start: start,
+					End:   start,
+				},
 			}, err != nil
 		}
 
 		if t.source.Current() == '?' {
+			start := t.source.Position()
 			err := t.source.Bump()
 			return Token{
 				Type: TokenTypeQuestion,
 				Text: "?",
+				Span: Span{
+					Start: start,
+					End:   start,
+				},
+			}, err != nil
+		}
+
+		if t.source.Current() == ',' {
+			start := t.source.Position()
+			err := t.source.Bump()
+			return Token{
+				Type: TokenTypeComma,
+				Text: ",",
+				Span: Span{
+					Start: start,
+					End:   start,
+				},
 			}, err != nil
 		}
 
@@ -128,21 +185,33 @@ func isIdentifierContinue(r rune) bool {
 type IRuneStream interface {
 	Bump() error
 	Current() rune
+	Position() Position
 }
 
 type RuneStream struct {
-	reader  *bufio.Reader
-	current rune
+	reader   *bufio.Reader
+	current  rune
+	position Position
 }
 
 func NewRuneStream(reader *bufio.Reader) (*RuneStream, error) {
 	rs := new(RuneStream)
 	rs.reader = reader
+	rs.position = Position{
+		Line:   0,
+		Column: 0,
+		Offset: 0,
+	}
+	rs.current = rune(0)
 	err := rs.Bump()
 	if err != nil {
 		return nil, err
 	}
 	return rs, nil
+}
+
+func (rs *RuneStream) Position() Position {
+	return rs.position
 }
 
 func (rs *RuneStream) Current() rune {
@@ -154,6 +223,16 @@ func (rs *RuneStream) Bump() error {
 	if err != nil {
 		return err
 	}
+
+	if rs.current != rune(0) {
+		rs.position.Offset += 1
+		rs.position.Column += 1
+		if rs.current == '\n' {
+			rs.position.Line += 1
+			rs.position.Column = 0
+		}
+	}
+
 	rs.current = r
 	return nil
 }

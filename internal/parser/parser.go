@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
-	"github.com/fireland15/rpc-gen/internal/ast"
 	"github.com/fireland15/rpc-gen/internal/lexing"
 	"github.com/fireland15/rpc-gen/internal/model"
 )
@@ -26,28 +26,6 @@ func NewParser(input io.Reader) (*Parser, error) {
 	return p, nil
 }
 
-type ServiceDefinition struct {
-	Models []ModelDefinition
-	Rpc    []RpcDefinition
-}
-
-type ModelDefinition struct {
-	Name   string
-	Fields []FieldDefinition
-}
-
-type FieldDefinition struct {
-	Name     string
-	TypeName string
-	Optional bool
-}
-
-type RpcDefinition struct {
-	Name             string
-	RequestTypeName  string
-	ResponseTypeName string
-}
-
 var ErrUnexpectedToken = errors.New("unexpected token")
 
 type Keyword string
@@ -58,9 +36,9 @@ const (
 	KwRpc      Keyword = "rpc"
 )
 
-func (p *Parser) Parse() (ServiceDefinition, error) {
-	def := ServiceDefinition{}
-	var err error
+func (p *Parser) Parse() (model.ServiceDefinition, error) {
+	def := model.ServiceDefinition{}
+	parseErrors := make([]string, 0)
 
 	for {
 		tok, err := p.tokens.Lookahead(0)
@@ -68,29 +46,32 @@ func (p *Parser) Parse() (ServiceDefinition, error) {
 			break
 		}
 
-		if tok.Type != lexing.TokenTypeIdentifier {
-			p.tokens.Next()
-			continue
-		} else if tok.Text == string(KwModel) {
+		if tok.Text == string(KwModel) {
 			md, err := p.parseModelDefinition()
 			if err != nil {
-				break
+				continue
 			}
 			def.Models = append(def.Models, md)
 			continue
 		} else if tok.Text == string(KwRpc) {
 			rd, err := p.parseRpcDefinition()
 			if err != nil {
-				break
+				continue
 			}
-			def.Rpc = append(def.Rpc, rd)
+			def.Methods = append(def.Methods, rd)
 			continue
 		} else {
+			msg := fmt.Sprintf("(%d:%d): expected keyword \"model\" or \"rpc\", but got \"%s\" instead", tok.Span.Start.Line, tok.Span.Start.Column, tok.Type)
+			parseErrors = append(parseErrors, msg)
 			p.tokens.Next()
 		}
 	}
 
-	return def, err
+	if len(parseErrors) > 0 {
+		err := errors.New(strings.Join(parseErrors, "\n"))
+		return def, err
+	}
+	return def, nil
 }
 
 func (p *Parser) parseRpcDefinition() (model.Method, error) {
@@ -105,7 +86,7 @@ func (p *Parser) parseRpcDefinition() (model.Method, error) {
 		return method, err
 	}
 
-	method.Name = rpcName.Text
+	method.Name = rpcName
 
 	err = p.parseTokenType(lexing.TokenTypeLeftParenthesis)
 	if err != nil {
@@ -130,6 +111,13 @@ func (p *Parser) parseRpcDefinition() (model.Method, error) {
 			return method, err
 		}
 		parameter.Type = ty
+		method.Parameters = append(method.Parameters, parameter)
+
+		tok, err = p.tokens.Lookahead(0)
+		if err != nil || tok.Type != lexing.TokenTypeComma {
+			break
+		}
+		p.tokens.Next()
 	}
 
 	err = p.parseTokenType(lexing.TokenTypeRightParenthesis)
@@ -160,10 +148,44 @@ func (p *Parser) parseType() (model.Type, error) {
 	}
 
 	ty.Name = name
+	ty.Variant = model.TypeVariantNamed
+
+	return p.parseOuterType(ty)
 }
 
-func (p *Parser) parseModelDefinition() (ModelDefinition, error) {
-	definition := ModelDefinition{}
+func (p *Parser) parseOuterType(inner model.Type) (model.Type, error) {
+	tok, err := p.tokens.Lookahead(0)
+	if err != nil {
+		return inner, nil
+	}
+
+	if tok.Type == lexing.TokenTypeLeftSquareBracket {
+		p.tokens.Next()
+		if tok, err = p.tokens.Lookahead(0); err == nil {
+			if tok.Type != lexing.TokenTypeRightSquareBracket {
+				return inner, ErrUnexpectedToken
+			}
+			p.tokens.Next()
+			new_type := model.Type{
+				Variant: model.TypeVariantArray,
+				Inner:   &inner,
+			}
+			return p.parseOuterType(new_type)
+		}
+	} else if tok.Type == lexing.TokenTypeQuestion {
+		p.tokens.Next()
+		new_type := model.Type{
+			Name:    "",
+			Variant: model.TypeVariantOptional,
+			Inner:   &inner,
+		}
+		return p.parseOuterType(new_type)
+	}
+	return inner, nil
+}
+
+func (p *Parser) parseModelDefinition() (model.Model, error) {
+	definition := model.Model{}
 	err := p.parseKeyword(KwModel)
 	if err != nil {
 		return definition, err
@@ -174,7 +196,7 @@ func (p *Parser) parseModelDefinition() (ModelDefinition, error) {
 		return definition, err
 	}
 
-	definition.Name = modelName.Text
+	definition.Name = modelName
 
 	err = p.parseLeftBracket()
 	if err != nil {
@@ -211,39 +233,23 @@ func (p *Parser) canParseModelFieldDefinition() bool {
 	return true
 }
 
-func (p *Parser) parseModelFieldDefinition() (FieldDefinition, error) {
-	definition := FieldDefinition{}
-	t, err := p.parseIdentifier()
+func (p *Parser) parseModelFieldDefinition() (model.Field, error) {
+	field := model.Field{}
+	fieldName, err := p.parseIdentifier()
 	if err != nil {
-		return definition, err
+		return field, err
 	}
 
-	definition.Name = t.Text
+	field.Name = fieldName
 
-	t, err = p.parseIdentifier()
+	fieldType, err := p.parseType()
 	if err != nil {
-		return definition, err
+		return field, err
 	}
 
-	definition.TypeName = t.Text
+	field.Type = fieldType
 
-	t, err = p.tokens.Lookahead(0)
-	if err != nil {
-		return definition, nil
-	}
-
-	if t.Type != lexing.TokenTypeIdentifier || t.Text != string(KwOptional) {
-		return definition, nil
-	}
-
-	t, err = p.tokens.Next()
-	if err != nil {
-		return definition, err
-	}
-
-	definition.Optional = true
-
-	return definition, nil
+	return field, nil
 }
 
 func (p *Parser) parseLeftBracket() error {
@@ -268,22 +274,17 @@ func (p *Parser) parseTokenType(tt lexing.TokenType) error {
 	return nil
 }
 
-func (p *Parser) parseIdentifier() (ast.Identifier, error) {
-	ident := ast.Identifier{}
-
+func (p *Parser) parseIdentifier() (string, error) {
 	t, err := p.tokens.Next()
 	if err != nil {
-		return ident, err
+		return "", err
 	}
 	if t.Type != lexing.TokenTypeIdentifier {
 		err = fmt.Errorf("expected identifier, but found \"%s\": %w", t.Text, ErrUnexpectedToken)
-		return ident, err
+		return "", err
 	}
 
-	ident.Name = t.Text
-	ident.Span = t.Span
-
-	return ident, nil
+	return t.Text, nil
 }
 
 func (p *Parser) parseKeyword(kw Keyword) error {

@@ -4,14 +4,14 @@ import (
 	"errors"
 	"log"
 
-	"github.com/fireland15/rpc-gen/internal/compiler"
 	"github.com/fireland15/rpc-gen/internal/config"
+	"github.com/fireland15/rpc-gen/internal/model"
 )
 
 var ErrUndefinedClient = errors.New("no config for client")
 
 type CodeGenerator interface {
-	Generate(service *compiler.Service) error
+	Generate(service *model.ServiceDefinition) error
 }
 
 type rootGenerator struct {
@@ -27,7 +27,7 @@ func GeneratorFromConfig(config *config.RpcGenConfig) (CodeGenerator, error) {
 	for client, clientConfig := range config.Clients {
 		log.Printf("Configuring %s client code generator.\n", client)
 		if client == "typescript" {
-			gen, err := NewTypescriptClientGenerator(&clientConfig)
+			gen, err := NewTypescriptClientGenerator(clientConfig)
 			if err != nil {
 				return nil, err
 			}
@@ -49,7 +49,7 @@ func GeneratorFromConfig(config *config.RpcGenConfig) (CodeGenerator, error) {
 	return generator, nil
 }
 
-func (g *rootGenerator) Generate(service *compiler.Service) error {
+func (g *rootGenerator) Generate(service *model.ServiceDefinition) error {
 	for _, generator := range g.inner {
 		err := generator.Generate(service)
 		if err != nil {

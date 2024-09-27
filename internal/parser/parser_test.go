@@ -9,7 +9,7 @@ func TestParserParsesModelDefinition(t *testing.T) {
 	source := `
 model Banans {
 	name string
-	stuff int optional
+	stuff int[]
 }`
 	p, err := NewParser(strings.NewReader(source))
 	if err != nil {
@@ -25,19 +25,26 @@ model Banans {
 	ExpectEqual(t, "model definition field count", 2, len(md.Fields))
 
 	f := md.Fields[0]
-	if f.Name != "name" || f.TypeName != "string" || f.Optional != false {
+	if f.Name != "name" || f.Type.String() != "string" {
 		t.Error("field not parsed correctly")
 	}
 
 	f = md.Fields[1]
-	if f.Name != "stuff" || f.TypeName != "int" || f.Optional != true {
+	if f.Name != "stuff" || f.Type.String() != "int[]" {
 		t.Error("field not parsed correctly")
+	}
+}
+
+func ExpectEqual[T comparable](t *testing.T, field string, expected T, actual T) {
+	if expected != actual {
+		t.Errorf("expected %s to be '%v', but got '%v'.", field, expected, actual)
+		t.Fail()
 	}
 }
 
 func TestParserParsesRpcDefinition(t *testing.T) {
 	source := `
-rpc Do(Soemthing) void`
+rpc Do(data Soemthing, data2 int) void`
 
 	p, err := NewParser(strings.NewReader(source))
 	if err != nil {
@@ -53,11 +60,11 @@ rpc Do(Soemthing) void`
 		t.Error("rpc definition name not parsed correctly")
 	}
 
-	if def.RequestTypeName != "Soemthing" {
+	if def.Parameters[0].Name != "data" || def.Parameters[0].Type.String() != "Soemthing" {
 		t.Error("rpc parameter type name not parsed correctly")
 	}
 
-	if def.ResponseTypeName != "void" {
+	if def.ReturnType.String() != "void" {
 		t.Error("rpc response type name not parsed correctly")
 	}
 }
@@ -74,7 +81,7 @@ model SignInResponse {
 	expires instant
 }
 	
-rpc SignIn(SignInRequest) SignInResponse
+rpc SignIn(request SignInRequest) SignInResponse
 
 rpc SignOut() void`
 
@@ -90,5 +97,5 @@ rpc SignOut() void`
 	}
 
 	ExpectEqual(t, "model count", 2, len(def.Models))
-	ExpectEqual(t, "rpc count", 2, len(def.Rpc))
+	ExpectEqual(t, "rpc count", 2, len(def.Methods))
 }

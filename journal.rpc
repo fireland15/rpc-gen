@@ -1,7 +1,7 @@
 model CreateJournalEntryCommand {
     name    string
-    details string optional
-    date    date   optional
+    details string 
+    date    date   
 }
 
 model DeleteJournalEntryCommand {
@@ -11,18 +11,17 @@ model DeleteJournalEntryCommand {
 model JournalEntry {
     id      uuid
     name    string
-    details string   optional
-    date    date     optional
-    tags    string
+    details string  
+    date    date?    
+    tags    string[]
 }
 
-rpc CreateJournalEntry(CreateJournalEntryCommand) JournalEntry
+rpc CreateJournalEntry(cmd CreateJournalEntryCommand) JournalEntry
 
-rpc DeleteJournalEntry(DeleteJournalEntryCommand)
+rpc DeleteJournalEntry(cmd DeleteJournalEntryCommand)
 
-model AddCommentCommand {
-    journalEntryId uuid
-    comment string
-}
+rpc AddComment(journalEntryId uuid, comment string)
 
-rpc AddComment(AddCommentCommand)
+rpc RegenerateDailySummaries() int
+
+rpc Signout()
