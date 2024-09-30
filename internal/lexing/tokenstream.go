@@ -66,5 +66,9 @@ func (t *TokenStream) Lookahead(n int) (Token, error) {
 		panic("shouldn't be here")
 	}
 
+	if len(tok.Text) == 0 {
+		return tok, ErrEndOfStream
+	}
+
 	return tok, nil
 }

@@ -1,27 +1,8 @@
-model CreateJournalEntryCommand {
+model ChangePasswordResponse {
     name    string
     details string 
     date    date   
 }
 
-model DeleteJournalEntryCommand {
-    journalEntryId uuid
-}
+rpc ChangePassword(old string, new string) ChangePasswordResponse
 
-model JournalEntry {
-    id      uuid
-    name    string
-    details string  
-    date    date?    
-    tags    string[]
-}
-
-rpc CreateJournalEntry(cmd CreateJournalEntryCommand) JournalEntry
-
-rpc DeleteJournalEntry(cmd DeleteJournalEntryCommand)
-
-rpc AddComment(journalEntryId uuid, comment string)
-
-rpc RegenerateDailySummaries() int
-
-rpc Signout()
