@@ -10,6 +10,9 @@ import (
 
 func main() {
 	configPath := flag.String("c", "config.json", "path to config file")
+
+	flag.Parse()
+
 	config, err := config.ReadConfig(*configPath)
 	if err != nil {
 		panic(err)
