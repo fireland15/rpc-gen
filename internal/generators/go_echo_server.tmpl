@@ -82,55 +82,11 @@ type Handler struct {
 }
 {{ end }} 
 
-{{ define "unknown" }} 
-{{ range .Methods -}}
-func (h *Handler) {{ .Name }}(c echo.Context) error {
-{{- if .HasParameters }}
-    m := {{ resolveType .RequestType }}{}
-	err := c.Bind(&m)
-	if err != nil {
-		return err
-	}
-
-{{- if .HasResponse }}
-    response, err := h.service.{{ .Name }}(&m)
-    if err != nil {
-        return err
-    }
-
-    return c.JSON(http.StatusOK, response)
-{{- else }}
-    err = h.service.{{ .Name }}(&m)
-    if err != nil {
-        return err
-    }
-
-    return c.NoContent(http.StatusOK)
-{{- end -}}
-{{- else -}}
-{{- if .HasResponse }}
-    response, err := h.service.{{ .Name }}()
-    if err != nil {
-        return err
-    }
-
-    return c.JSON(http.StatusOK, response)
-{{- else }}
-    err = h.service.{{ .Name }}(&m)
-    if err != nil {
-        return err
-    }
-
-    return c.NoContent(http.StatusOK)
-{{- end -}}
-{{- end }}
-}
-
-{{ end -}}
+{{ define "register_handler" }} 
 
 func (h *Handler) RegisterHandlers(e *echo.Echo, middleware echo.MiddlewareFunc) {
     {{- range .Methods }}
-    e.POST("/{{ .GetPath }}", h.{{ .Name }}, middleware)
+    e.POST("/{{ toSnake .Name }}", h.{{ toCamel .Name }}, middleware)
     {{- end }}
 }
 

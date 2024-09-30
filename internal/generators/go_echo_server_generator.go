@@ -47,6 +47,7 @@ func NewGoEchoServerGenerator(config json.RawMessage) (CodeGenerator, error) {
 	funcs := make(template.FuncMap, 0)
 	funcs["toCamel"] = strcase.ToCamel
 	funcs["toLowerCamel"] = strcase.ToLowerCamel
+	funcs["toSnake"] = strcase.ToSnake
 	funcs["toSignature"] = func(m model.Method) string {
 		params := make([]string, len(m.Parameters))
 		for idx, p := range m.Parameters {
@@ -159,6 +160,11 @@ func (g *GoEchoServerGenerator) Generate(service *model.ServiceDefinition) error
 		if err != nil {
 			return err
 		}
+	}
+
+	err = g.template.ExecuteTemplate(f, "register_handler", service)
+	if err != nil {
+		return err
 	}
 
 	return nil
