@@ -15,11 +15,11 @@ function {{ toLowerCamel .Name }}(fetcher: Fetcher<{{ toCamel .ParameterType.Nam
         {{ toLowerCamel .Name }},
     {{- end }}
     };
-    return fetcher(params);
+    return fetcher("/{{ toSnake .Name }}", params);
 }
 {{- else }}
 function {{ toLowerCamel .Name }}(fetcher: Fetcher<undefined, {{ returnType . }}>, {{ joinParameters .}}): Promise<{{ returnType . }}> {
-    return fetcher(undefined);
+    return fetcher("/{{ toSnake .Name }}", undefined);
 }
 {{- end }}
 {{ end }}

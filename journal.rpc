@@ -4,5 +4,25 @@ model ChangePasswordResponse {
     date    date   
 }
 
-rpc ChangePassword(old string, new string) ChangePasswordResponse
+model SigninResponse {
+    errors string[]
+}
 
+model JournalEntry {
+    id uuid
+    title string
+    details string?
+    status int
+    createdOn date
+    updatedOn date
+}
+
+rpc Signin(username string, password string) SigninResponse
+
+rpc Signout()
+
+rpc ExtendSession()
+
+rpc ChangePassword(oldPassword string, newPassword string) ChangePasswordResponse
+
+rpc CreateJournalEntry() JournalEntry

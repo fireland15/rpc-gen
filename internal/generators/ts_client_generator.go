@@ -41,6 +41,7 @@ func NewTypescriptClientGenerator(config json.RawMessage) (CodeGenerator, error)
 	funcs := make(template.FuncMap, 0)
 	funcs["toCamel"] = strcase.ToCamel
 	funcs["toLowerCamel"] = strcase.ToLowerCamel
+	funcs["toSnake"] = strcase.ToSnake
 	funcs["resolveType"] = c.resolveType
 	funcs["joinParameters"] = func(m model.Method) string {
 		params := make([]string, len(m.Parameters))
@@ -95,7 +96,7 @@ func (g *TypescriptClientGenerator) Generate(service *model.ServiceDefinition) e
 		}
 	}
 
-	_, err = f.WriteString("type Fetcher<P = unknown, R = unknown> = (params: P) => Promise<R>;\n")
+	_, err = f.WriteString("type Fetcher<P = unknown, R = unknown> = (url: string, params: P) => Promise<R>;\n")
 	if err != nil {
 		return err
 	}
