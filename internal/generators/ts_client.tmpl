@@ -9,7 +9,7 @@ type {{ toCamel .Name }} = {
 
 {{ define "method" }}
 {{- if hasParameters . }}
-function {{ toLowerCamel .Name }}(fetcher: Fetcher<{{ toCamel .ParameterType.Name }}, {{ returnType . }}>, {{ joinParameters .}}): Promise<{{ returnType . }}> {
+export function {{ toLowerCamel .Name }}(fetcher: Fetcher<{{ toCamel .ParameterType.Name }}, {{ returnType . }}>, {{ joinParameters .}}): Promise<{{ returnType . }}> {
     const params: {{ toCamel .ParameterType.Name }} = {
     {{- range .Parameters }}
         {{ toLowerCamel .Name }},
@@ -18,7 +18,7 @@ function {{ toLowerCamel .Name }}(fetcher: Fetcher<{{ toCamel .ParameterType.Nam
     return fetcher("/{{ toSnake .Name }}", params);
 }
 {{- else }}
-function {{ toLowerCamel .Name }}(fetcher: Fetcher<undefined, {{ returnType . }}>, {{ joinParameters .}}): Promise<{{ returnType . }}> {
+export function {{ toLowerCamel .Name }}(fetcher: Fetcher<undefined, {{ returnType . }}>, {{ joinParameters .}}): Promise<{{ returnType . }}> {
     return fetcher("/{{ toSnake .Name }}", undefined);
 }
 {{- end }}
