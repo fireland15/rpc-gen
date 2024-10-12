@@ -57,6 +57,46 @@ impl<'a> Iterator for Tokens<'a> {
                     })
                 }
             }
+            '{' => Some(Token {
+                kind: TokenKind::LeftSquiggle,
+                span: Span::starts(start),
+            }),
+            '}' => Some(Token {
+                kind: TokenKind::RightSquiggle,
+                span: Span::starts(start),
+            }),
+            '(' => Some(Token {
+                kind: TokenKind::LeftParenthesis,
+                span: Span::starts(start),
+            }),
+            ')' => Some(Token {
+                kind: TokenKind::RightParenthesis,
+                span: Span::starts(start),
+            }),
+            '<' => Some(Token {
+                kind: TokenKind::LeftAngle,
+                span: Span::starts(start),
+            }),
+            '>' => Some(Token {
+                kind: TokenKind::RightAngle,
+                span: Span::starts(start),
+            }),
+            '[' => Some(Token {
+                kind: TokenKind::LeftSquare,
+                span: Span::starts(start),
+            }),
+            ']' => Some(Token {
+                kind: TokenKind::RightSquare,
+                span: Span::starts(start),
+            }),
+            '?' => Some(Token {
+                kind: TokenKind::Question,
+                span: Span::starts(start),
+            }),
+            ',' => Some(Token {
+                kind: TokenKind::Comma,
+                span: Span::starts(start),
+            }),
             _ => None,
         }
     }
@@ -66,7 +106,7 @@ impl<'a> Iterator for Tokens<'a> {
 mod tests {
     use crate::parsing::{
         char_positions::{CharPositionIterators, Position},
-        token::{Span, Token, TokenKind},
+        token::{KeywordKind, Span, Token, TokenKind},
     };
 
     use super::Tokens;
@@ -90,6 +130,102 @@ mod tests {
                 span: Span::starts(Position::new(0, 4, 4)).ends(Position::new(0, 4, 4))
             }
         )
+    }
+
+    #[test]
+    fn tokenizes_keywords() {
+        let mut tokens = Tokens::new("rpc model".char_indices().char_positions());
+        assert_eq!(
+            tokens.next().expect("a token"),
+            Token {
+                kind: TokenKind::Keyword(KeywordKind::Rpc),
+                span: Span::starts(Position::new(0, 0, 0)).ends(Position::new(0, 2, 2))
+            }
+        );
+        assert_eq!(
+            tokens.next().expect("a token"),
+            Token {
+                kind: TokenKind::Keyword(KeywordKind::Model),
+                span: Span::starts(Position::new(0, 4, 4)).ends(Position::new(0, 8, 8))
+            }
+        );
+        assert_eq!(tokens.next(), None);
+    }
+
+    #[test]
+    fn tokenizes_symbols() {
+        let mut tokens = Tokens::new("{ } < > ( ) [ ] ? ,".char_indices().char_positions());
+        assert_eq!(
+            tokens.next().expect("a token"),
+            Token {
+                kind: TokenKind::LeftSquiggle,
+                span: Span::starts(Position::new(0, 0, 0)).ends(Position::new(0, 0, 0))
+            }
+        );
+        assert_eq!(
+            tokens.next().expect("a token"),
+            Token {
+                kind: TokenKind::RightSquiggle,
+                span: Span::starts(Position::new(0, 2, 2)).ends(Position::new(0, 2, 2))
+            }
+        );
+        assert_eq!(
+            tokens.next().expect("a token"),
+            Token {
+                kind: TokenKind::LeftAngle,
+                span: Span::starts(Position::new(0, 4, 4)).ends(Position::new(0, 4, 4))
+            }
+        );
+        assert_eq!(
+            tokens.next().expect("a token"),
+            Token {
+                kind: TokenKind::RightAngle,
+                span: Span::starts(Position::new(0, 6, 6)).ends(Position::new(0, 6, 6))
+            }
+        );
+        assert_eq!(
+            tokens.next().expect("a token"),
+            Token {
+                kind: TokenKind::LeftParenthesis,
+                span: Span::starts(Position::new(0, 8, 8)).ends(Position::new(0, 8, 8))
+            }
+        );
+        assert_eq!(
+            tokens.next().expect("a token"),
+            Token {
+                kind: TokenKind::RightParenthesis,
+                span: Span::starts(Position::new(0, 10, 10)).ends(Position::new(0, 10, 10))
+            }
+        );
+        assert_eq!(
+            tokens.next().expect("a token"),
+            Token {
+                kind: TokenKind::LeftSquare,
+                span: Span::starts(Position::new(0, 12, 12)).ends(Position::new(0, 12, 12))
+            }
+        );
+        assert_eq!(
+            tokens.next().expect("a token"),
+            Token {
+                kind: TokenKind::RightSquare,
+                span: Span::starts(Position::new(0, 14, 14)).ends(Position::new(0, 14, 14))
+            }
+        );
+        assert_eq!(
+            tokens.next().expect("a token"),
+            Token {
+                kind: TokenKind::Question,
+                span: Span::starts(Position::new(0, 16, 16)).ends(Position::new(0, 16, 16))
+            }
+        );
+        assert_eq!(
+            tokens.next().expect("a token"),
+            Token {
+                kind: TokenKind::Comma,
+                span: Span::starts(Position::new(0, 18, 18)).ends(Position::new(0, 18, 18))
+            }
+        );
+        assert_eq!(tokens.next(), None);
     }
 
     #[test]

@@ -12,6 +12,10 @@ pub enum TokenKind {
     RightSquiggle,
     LeftAngle,
     RightAngle,
+    LeftSquare,
+    RightSquare,
+    Question,
+    Comma,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -56,4 +60,20 @@ impl Span {
 pub struct Token {
     pub kind: TokenKind,
     pub span: Span,
+}
+
+impl Token {
+    pub fn identifier(span: Span) -> Self {
+        Token {
+            kind: TokenKind::Identifier,
+            span,
+        }
+    }
+
+    pub fn keyword(kind: KeywordKind, span: Span) -> Self {
+        Token {
+            kind: TokenKind::Keyword(kind),
+            span,
+        }
+    }
 }
