@@ -49,10 +49,11 @@ func NewGoEchoServerGenerator(config json.RawMessage) (CodeGenerator, error) {
 	funcs["toLowerCamel"] = strcase.ToLowerCamel
 	funcs["toSnake"] = strcase.ToSnake
 	funcs["toSignature"] = func(m model.Method) string {
-		params := make([]string, len(m.Parameters))
+		params := make([]string, len(m.Parameters)+1)
 		for idx, p := range m.Parameters {
 			params[idx] = fmt.Sprintf("%s %s", p.Name, c.resolveType(p.Type))
 		}
+		params[len(params)-1] = "c echo.Context"
 
 		returnType := "error"
 		if m.ReturnType != nil {
