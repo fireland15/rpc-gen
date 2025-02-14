@@ -26,3 +26,14 @@ func (t Type) String() string {
 	}
 	panic("unreachable")
 }
+
+func (t Type) BaseName() string {
+	if t.Variant == TypeVariantNamed {
+		return t.Name
+	} else if t.Variant == TypeVariantArray {
+		return t.Inner.BaseName()
+	} else if t.Variant == TypeVariantOptional {
+		return t.Inner.BaseName()
+	}
+	panic("unreachable")
+}
