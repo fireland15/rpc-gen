@@ -6,12 +6,12 @@ use crate::parsing::{
 };
 
 use super::{
-    ast::{ModelDefinition, ServiceDefinition, Type},
+    ast::{MethodDefinition, MethodParameter, ModelDefinition, ProtocolDefinition, Type},
     token::{KeywordKind, Span, Token, TokenKind},
     tokens::Tokens,
 };
 
-pub fn parse(source: &str) -> Result<ServiceDefinition, ParseError> {
+pub fn parse(source: &str) -> Result<ProtocolDefinition, Vec<ParseError>> {
     let mut parser = Parser {
         source,
         tokens: Tokens::new(source.char_indices().char_positions()).peekable(),
@@ -35,8 +35,8 @@ struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    fn parse(&mut self) -> Result<ServiceDefinition, Vec<ParseError>> {
-        let mut service = ServiceDefinition {
+    fn parse(&mut self) -> Result<ProtocolDefinition, Vec<ParseError>> {
+        let mut service = ProtocolDefinition {
             models: Vec::new(),
             methods: Vec::new(),
         };
@@ -56,7 +56,10 @@ impl<'a> Parser<'a> {
                     kind: TokenKind::Keyword(KeywordKind::Rpc),
                     ..
                 } => {
-                    todo!("parse method definition");
+                    match self.parse_method_definition() {
+                        Ok(def) => service.methods.push(def),
+                        Err(err) => errors.push(err),
+                    };
                 }
                 _ => {
                     let token = self.tokens.next().expect("already checked that is Some");
@@ -65,7 +68,7 @@ impl<'a> Parser<'a> {
                 }
             }
         }
-        todo!();
+        Ok(service)
     }
 
     fn unexpected(&self, expected: TokenKind, token: &Token) -> ParseError {
@@ -78,6 +81,101 @@ impl<'a> Parser<'a> {
 
     fn get_text(&self, span: &Span) -> &'a str {
         &self.source[span.start.index..span.end.index + 1]
+    }
+
+    fn parse_method_definition(&mut self) -> Result<MethodDefinition, ParseError> {
+        let token = self.tokens.next().ok_or(ParseError::UnexpectedEndOfInput)?;
+        let Token {
+            kind: TokenKind::Keyword(KeywordKind::Rpc),
+            ..
+        } = token
+        else {
+            return Err(self.unexpected(TokenKind::Keyword(KeywordKind::Rpc), &token));
+        };
+
+        let identifier_token = self.tokens.next().ok_or(ParseError::UnexpectedEndOfInput)?;
+        let Token {
+            kind: TokenKind::Identifier,
+            ..
+        } = identifier_token
+        else {
+            return Err(self.unexpected(TokenKind::Identifier, &identifier_token));
+        };
+
+        let Some(Token {
+            kind: TokenKind::LeftParenthesis,
+            ..
+        }) = self.tokens.peek()
+        else {
+            return Err(self.unexpected(TokenKind::LeftParenthesis, &token));
+        };
+        self.tokens.next();
+
+        // parse parameters
+
+        let mut parameters = Vec::new();
+
+        loop {
+            // Identifier
+            let Some(Token {
+                kind: TokenKind::Identifier,
+                ..
+            }) = self.tokens.peek()
+            else {
+                break;
+            };
+            let token = self.tokens.next().expect("already checked this was Some");
+            let identifier = Identifier { token };
+
+            // Type
+            let ty = self.parse_type()?;
+
+            parameters.push(MethodParameter {
+                name: identifier,
+                ty,
+            });
+
+            // Optional comma
+            if self
+                .tokens
+                .next_if(|t| t.kind == TokenKind::Comma)
+                .is_none()
+            {
+                break;
+            }
+        }
+
+        let Some(Token {
+            kind: TokenKind::RightParenthesis,
+            ..
+        }) = self.tokens.peek()
+        else {
+            return Err(self.unexpected(TokenKind::RightParenthesis, &token));
+        };
+        self.tokens.next();
+
+        if self
+            .tokens
+            .next_if(|t| t.kind == TokenKind::Identifier)
+            .is_none()
+        {
+            Ok(MethodDefinition {
+                name: Identifier {
+                    token: identifier_token,
+                },
+                parameters: parameters,
+                return_ty: None,
+            })
+        } else {
+            let return_ty = self.parse_type()?;
+            Ok(MethodDefinition {
+                name: Identifier {
+                    token: identifier_token,
+                },
+                parameters: parameters,
+                return_ty: Some(return_ty),
+            })
+        }
     }
 
     fn parse_model_definition(&mut self) -> Result<ModelDefinition, ParseError> {

@@ -1,7 +1,7 @@
 use super::token::{Span, Token};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ServiceDefinition {
+pub struct ProtocolDefinition {
     pub models: Vec<ModelDefinition>,
     pub methods: Vec<MethodDefinition>,
 }
