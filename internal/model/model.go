@@ -3,8 +3,9 @@ package model
 import "github.com/iancoleman/strcase"
 
 type Model struct {
-	Name   string
-	Fields []Field
+	Name              string
+	Fields            []Field
+	serviceDefinition *ProtocolDefinition
 }
 
 type Field struct {

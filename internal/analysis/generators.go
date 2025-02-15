@@ -6,7 +6,7 @@ import (
 	"github.com/fireland15/rpc-gen/internal/model"
 )
 
-func GenerateMethodParameterModels(service *model.ServiceDefinition) {
+func GenerateMethodParameterModels(service *model.ProtocolDefinition) {
 	for idx, method := range service.Methods {
 		if len(method.Parameters) == 0 {
 			continue

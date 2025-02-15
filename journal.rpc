@@ -26,3 +26,9 @@ rpc ExtendSession()
 rpc ChangePassword(oldPassword string, newPassword string) ChangePasswordResponse
 
 rpc CreateJournalEntry() JournalEntry
+
+model UploadJournalEntryImageRequest {
+    journalEntryId int
+}
+
+rpc UploadJournalEntryImage(request UploadJournalEntryImageRequest, image Upload)

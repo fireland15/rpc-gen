@@ -11,7 +11,7 @@ import (
 var ErrUndefinedClient = errors.New("no config for client")
 
 type CodeGenerator interface {
-	Generate(service *model.ServiceDefinition) error
+	Generate(service *model.ProtocolDefinition) error
 }
 
 type rootGenerator struct {
@@ -49,7 +49,7 @@ func GeneratorFromConfig(config *config.RpcGenConfig) (CodeGenerator, error) {
 	return generator, nil
 }
 
-func (g *rootGenerator) Generate(service *model.ServiceDefinition) error {
+func (g *rootGenerator) Generate(service *model.ProtocolDefinition) error {
 	for _, generator := range g.inner {
 		err := generator.Generate(service)
 		if err != nil {

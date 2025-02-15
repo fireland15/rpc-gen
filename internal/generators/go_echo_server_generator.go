@@ -104,7 +104,7 @@ func (g *GoEchoServerGenerator) resolveType(typeName model.Type) string {
 	}
 }
 
-func (g *GoEchoServerGenerator) Generate(service *model.ServiceDefinition) error {
+func (g *GoEchoServerGenerator) Generate(service *model.ProtocolDefinition) error {
 	err := os.MkdirAll(filepath.Dir(g.config.Output), os.ModePerm)
 	if err != nil {
 		return err

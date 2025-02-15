@@ -36,8 +36,8 @@ const (
 	KwRpc      Keyword = "rpc"
 )
 
-func (p *Parser) Parse() (model.ServiceDefinition, error) {
-	def := model.ServiceDefinition{}
+func (p *Parser) Parse() (model.ProtocolDefinition, error) {
+	def := model.ProtocolDefinition{}
 	parseErrors := make([]string, 0)
 
 	for {

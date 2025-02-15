@@ -8,7 +8,7 @@ import (
 )
 
 // Makes sure that type references have a corresponding definition
-func CheckTypeReferences(errors *[]string, service model.ServiceDefinition) {
+func CheckTypeReferences(errors *[]string, service model.ProtocolDefinition) {
 	typeNames := getDefinedTypeNames(service.Models)
 
 	for _, m := range service.Models {

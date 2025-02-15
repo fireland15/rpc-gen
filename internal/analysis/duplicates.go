@@ -7,7 +7,7 @@ import (
 	"github.com/fireland15/rpc-gen/internal/model"
 )
 
-func CheckForDuplicateModelFields(errors *[]string, service model.ServiceDefinition) {
+func CheckForDuplicateModelFields(errors *[]string, service model.ProtocolDefinition) {
 	for _, m := range service.Models {
 		fieldNames := make([]string, 0, len(m.Fields))
 		for _, f := range m.Fields {
@@ -21,7 +21,7 @@ func CheckForDuplicateModelFields(errors *[]string, service model.ServiceDefinit
 	}
 }
 
-func CheckForDuplicateMethodParameters(errors *[]string, service *model.ServiceDefinition) {
+func CheckForDuplicateMethodParameters(errors *[]string, service *model.ProtocolDefinition) {
 	for _, m := range service.Methods {
 		names := make([]string, len(m.Parameters))
 		for _, param := range m.Parameters {

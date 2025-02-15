@@ -4,6 +4,8 @@ import "fmt"
 
 type TypeVariant int
 
+const UploadTypeName = "Upload"
+
 const (
 	TypeVariantNamed TypeVariant = iota
 	TypeVariantArray
@@ -36,4 +38,8 @@ func (t Type) BaseName() string {
 		return t.Inner.BaseName()
 	}
 	panic("unreachable")
+}
+
+func (t Type) IsUploadType() bool {
+	return t.BaseName() == UploadTypeName
 }

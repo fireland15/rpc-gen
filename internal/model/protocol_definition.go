@@ -1,12 +1,22 @@
 package model
 
-type ServiceDefinition struct {
+type ProtocolDefinition struct {
 	Name    string
 	Methods []Method
 	Models  []Model
 }
 
-func (sd ServiceDefinition) Types() map[string]struct{} {
+func (sd *ProtocolDefinition) AddMethod(method Method) {
+	method.service = sd
+	sd.Methods = append(sd.Methods, method)
+}
+
+func (sd *ProtocolDefinition) AddModel(m Model) {
+	m.serviceDefinition = sd
+	sd.Models = append(sd.Models, m)
+}
+
+func (sd *ProtocolDefinition) Types() map[string]struct{} {
 	ret := make(map[string]struct{})
 	for _, m := range sd.Methods {
 		if m.ReturnType != nil {
@@ -25,3 +35,4 @@ func (sd ServiceDefinition) Types() map[string]struct{} {
 
 	return ret
 }
+

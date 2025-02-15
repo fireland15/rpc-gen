@@ -1,4 +1,4 @@
-package generators
+package typescript
 
 import (
 	_ "embed"
@@ -9,39 +9,43 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/fireland15/rpc-gen/internal/config"
+	"github.com/fireland15/rpc-gen/internal/generators"
 	"github.com/fireland15/rpc-gen/internal/model"
 	"github.com/iancoleman/strcase"
 )
 
-type TypescriptClientConfig struct {
-	Output string            `json:"output"`
-	Types  map[string]string `json:"types"`
-}
-
-type TypescriptClientGenerator struct {
-	config   TypescriptClientConfig
+type TypescriptGenerator struct {
+	config   TypescriptConfig
 	template *template.Template
 }
 
-//go:embed ts_client.tmpl
-var ts_client_template string
+type TypescriptConfig struct {
+	Output   string
+	Template string
+	Types    map[string]typeConfig `json:"types"`
+}
 
-func NewTypescriptClientGenerator(config json.RawMessage) (CodeGenerator, error) {
-	if config == nil {
-		panic("config is nil")
-	}
+type typeConfig struct {
+	// The symbol name to import
+	Name string `json:"name"`
+	// The module string for the import
+	Module string `json:"module"`
+	// Used when using * as the import
+	Default bool `json:"default"`
+	// Used when doing something like `import * as Bananas from "apples"`
+	Aliasing string `json:"aliasing"`
+}
 
-	c := new(TypescriptClientGenerator)
+func NewTypescriptGenerator(config config.GeneratorConfig) (generators.CodeGenerator, error) {
+	c := new(TypescriptGenerator)
 
-	err := json.Unmarshal(config, &c.config)
+	err := json.Unmarshal(config.Config, &c.config)
 	if err != nil {
 		return nil, err
 	}
 
 	funcs := make(template.FuncMap, 0)
-	funcs["toCamel"] = strcase.ToCamel
-	funcs["toLowerCamel"] = strcase.ToLowerCamel
-	funcs["toSnake"] = strcase.ToSnake
 	funcs["resolveType"] = c.resolveType
 	funcs["joinParameters"] = func(m model.Method) string {
 		params := make([]string, len(m.Parameters))
@@ -57,11 +61,8 @@ func NewTypescriptClientGenerator(config json.RawMessage) (CodeGenerator, error)
 			return c.resolveType(*m.ReturnType)
 		}
 	}
-	funcs["hasParameters"] = func(m model.Method) bool {
-		return len(m.Parameters) > 0
-	}
 
-	tmpl, err := template.New("ts-client").Funcs(funcs).Parse(ts_client_template)
+	tmpl, err := template.New("ts-client").Funcs(funcs).ParseFiles(c.config.Template)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +72,7 @@ func NewTypescriptClientGenerator(config json.RawMessage) (CodeGenerator, error)
 	return c, nil
 }
 
-func (g *TypescriptClientGenerator) Generate(service *model.ProtocolDefinition) error {
+func (g *TypescriptGenerator) Generate(service *model.ProtocolDefinition) error {
 	err := os.MkdirAll(filepath.Dir(g.config.Output), os.ModePerm)
 	if err != nil {
 		return err
@@ -110,7 +111,43 @@ func (g *TypescriptClientGenerator) Generate(service *model.ProtocolDefinition) 
 	return nil
 }
 
-func (g *TypescriptClientGenerator) resolveType(typeName model.Type) string {
+func mapToTypescript(sd model.ProtocolDefinition) typescriptCodegen {
+	x := typescriptCodegen{}
+
+	// Convert models into typescript types
+	for _, m := range sd.Models {
+		tsType := model.Model{
+			Name:   strcase.ToCamel(m.Name),
+			Fields: make([]model.Field, len(m.Fields)),
+		}
+
+		for idx, f  := range m.Fields {
+			tsType.Fields[idx] = model.Field{
+				Name: strcase.ToLowerCamel(f.Name),
+				
+			}}
+		}
+	}
+	return x
+}
+
+func (g *TypescriptGenerator) collectImports(m model.ServiceDefinition) []importStatement {
+	importStatements := make([]importStatement, 0)
+	for _, model := range m.Models {
+		for _, field := range model.Fields {
+			rootTypeName(field.Type)
+		}
+	}
+}
+
+func rootTypeName(t model.Type) string {
+	if t.Variant == model.TypeVariantNamed {
+		return t.Name
+	}
+	return rootTypeName(*t.Inner)
+}
+
+func (g *TypescriptGenerator) resolveType(typeName model.Type) string {
 	if typeName.Variant == model.TypeVariantNamed {
 		alias, found := g.config.Types[typeName.Name]
 		if !found {
