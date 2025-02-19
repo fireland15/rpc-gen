@@ -6,7 +6,10 @@ use crate::parsing::{
 };
 
 use super::{
-    ast::{MethodDefinition, MethodParameter, ModelDefinition, ProtocolDefinition, Type},
+    ast::{
+        MethodDefinition, MethodParameter, ModelDefinition, ProtocolDefinition, ScalarDefinition,
+        Type,
+    },
     token::{KeywordKind, Span, Token, TokenKind},
     tokens::Tokens,
 };
@@ -26,6 +29,7 @@ pub enum ParseError {
         expected: TokenKind,
         actual: TokenKind,
         actual_text: String,
+        span: Span,
     },
 }
 
@@ -39,6 +43,7 @@ impl<'a> Parser<'a> {
         let mut service = ProtocolDefinition {
             models: Vec::new(),
             methods: Vec::new(),
+            scalars: Vec::new(),
         };
         let mut errors = Vec::new();
         while let Some(token) = self.tokens.peek() {
@@ -53,6 +58,13 @@ impl<'a> Parser<'a> {
                     };
                 }
                 Token {
+                    kind: TokenKind::Keyword(KeywordKind::Scalar),
+                    ..
+                } => match self.parse_scalar_definition() {
+                    Ok(def) => service.scalars.push(def),
+                    Err(err) => errors.push(err),
+                },
+                Token {
                     kind: TokenKind::Keyword(KeywordKind::Rpc),
                     ..
                 } => {
@@ -65,8 +77,12 @@ impl<'a> Parser<'a> {
                     let token = self.tokens.next().expect("already checked that is Some");
                     self.unexpected(TokenKind::Keyword(KeywordKind::Model), &token);
                     self.unexpected(TokenKind::Keyword(KeywordKind::Rpc), &token);
+                    self.unexpected(TokenKind::Keyword(KeywordKind::Scalar), &token);
                 }
             }
+        }
+        if errors.len() > 0 {
+            return Err(errors);
         }
         Ok(service)
     }
@@ -76,11 +92,46 @@ impl<'a> Parser<'a> {
             expected: expected,
             actual: token.kind.clone(),
             actual_text: self.get_text(&token.span).into(),
+            span: token.span.clone(),
         }
     }
 
     fn get_text(&self, span: &Span) -> &'a str {
         &self.source[span.start.index..span.end.index + 1]
+    }
+
+    fn parse_scalar_definition(&mut self) -> Result<ScalarDefinition, ParseError> {
+        let token = self.tokens.next().ok_or(ParseError::UnexpectedEndOfInput)?;
+        let Token {
+            kind: TokenKind::Keyword(KeywordKind::Scalar),
+            ..
+        } = token
+        else {
+            return Err(self.unexpected(TokenKind::Keyword(KeywordKind::Scalar), &token));
+        };
+
+        let identifier_token = self.tokens.next().ok_or(ParseError::UnexpectedEndOfInput)?;
+        let Token {
+            kind: TokenKind::Identifier,
+            ..
+        } = identifier_token
+        else {
+            return Err(self.unexpected(TokenKind::Identifier, &identifier_token));
+        };
+
+        let serialized_token = self.tokens.next().ok_or(ParseError::UnexpectedEndOfInput)?;
+        let Token {
+            kind: TokenKind::Identifier,
+            ..
+        } = serialized_token
+        else {
+            return Err(self.unexpected(TokenKind::Identifier, &serialized_token));
+        };
+
+        Ok(ScalarDefinition {
+            name: Identifier::new(identifier_token.span, &self.source),
+            serialized: Identifier::new(serialized_token.span, &self.source),
+        })
     }
 
     fn parse_method_definition(&mut self) -> Result<MethodDefinition, ParseError> {
@@ -125,7 +176,7 @@ impl<'a> Parser<'a> {
                 break;
             };
             let token = self.tokens.next().expect("already checked this was Some");
-            let identifier = Identifier { token };
+            let identifier = Identifier::new(token.span, &self.source);
 
             // Type
             let ty = self.parse_type()?;
@@ -156,24 +207,20 @@ impl<'a> Parser<'a> {
 
         if self
             .tokens
-            .next_if(|t| t.kind == TokenKind::Identifier)
-            .is_none()
+            .peek()
+            .is_some_and(|t| t.kind == TokenKind::Identifier)
         {
-            Ok(MethodDefinition {
-                name: Identifier {
-                    token: identifier_token,
-                },
-                parameters: parameters,
-                return_ty: None,
-            })
-        } else {
             let return_ty = self.parse_type()?;
             Ok(MethodDefinition {
-                name: Identifier {
-                    token: identifier_token,
-                },
+                name: Identifier::new(identifier_token.span, &self.source),
                 parameters: parameters,
                 return_ty: Some(return_ty),
+            })
+        } else {
+            Ok(MethodDefinition {
+                name: Identifier::new(identifier_token.span, &self.source),
+                parameters: parameters,
+                return_ty: None,
             })
         }
     }
@@ -219,7 +266,7 @@ impl<'a> Parser<'a> {
                 break;
             };
             let token = self.tokens.next().expect("already checked this was Some");
-            let identifier = Identifier { token };
+            let identifier = Identifier::new(token.span, &self.source);
 
             let ty = self.parse_type()?;
 
@@ -239,9 +286,7 @@ impl<'a> Parser<'a> {
         };
 
         return Ok(ModelDefinition {
-            name: Identifier {
-                token: identifier_token,
-            },
+            name: Identifier::new(identifier_token.span, &self.source),
             fields,
         });
     }
@@ -257,7 +302,7 @@ impl<'a> Parser<'a> {
         };
 
         let mut ty = Type::Type {
-            identifier: Identifier { token },
+            identifier: Identifier::new(token.span, &self.source),
         };
 
         loop {
@@ -357,6 +402,7 @@ mod tests {
             ty,
             Type::Type {
                 identifier: Identifier {
+                    text: "Apples".into(),
                     token: Token {
                         kind: TokenKind::Identifier,
                         span: Span::starts(Position::new(0, 0, 0)).ends(Position::new(0, 5, 5))
@@ -380,6 +426,7 @@ mod tests {
             Type::Array {
                 inner: Box::new(Type::Type {
                     identifier: Identifier {
+                        text: "Apples".into(),
                         token: Token {
                             kind: TokenKind::Identifier,
                             span: Span::starts(Position::new(0, 0, 0)).ends(Position::new(0, 5, 5))
@@ -404,6 +451,7 @@ mod tests {
             Type::Optional {
                 inner: Box::new(Type::Type {
                     identifier: Identifier {
+                        text: "Apples".into(),
                         token: Token {
                             kind: TokenKind::Identifier,
                             span: Span::starts(Position::new(0, 0, 0)).ends(Position::new(0, 5, 5))
@@ -428,6 +476,7 @@ mod tests {
             Type::Generic {
                 inner: Box::new(Type::Type {
                     identifier: Identifier {
+                        text: "Apples".into(),
                         token: Token {
                             kind: TokenKind::Identifier,
                             span: Span::starts(Position::new(0, 0, 0)).ends(Position::new(0, 5, 5))
@@ -437,6 +486,7 @@ mod tests {
                 parameters: vec![
                     Type::Type {
                         identifier: Identifier {
+                            text: "Banana".into(),
                             token: Token {
                                 kind: TokenKind::Identifier,
                                 span: Span::starts(Position::new(0, 7, 7))
@@ -446,6 +496,7 @@ mod tests {
                     },
                     Type::Type {
                         identifier: Identifier {
+                            text: "Carrot".into(),
                             token: Token {
                                 kind: TokenKind::Identifier,
                                 span: Span::starts(Position::new(0, 15, 15))
@@ -472,6 +523,7 @@ mod tests {
             Type::Generic {
                 inner: Box::new(Type::Type {
                     identifier: Identifier {
+                        text: "Apples".into(),
                         token: Token {
                             kind: TokenKind::Identifier,
                             span: Span::starts(Position::new(0, 0, 0)).ends(Position::new(0, 5, 5))
@@ -482,6 +534,7 @@ mod tests {
                     inner: Box::new(Type::Array {
                         inner: Box::new(Type::Type {
                             identifier: Identifier {
+                                text: "Banana".into(),
                                 token: Token {
                                     kind: TokenKind::Identifier,
                                     span: Span::starts(Position::new(0, 7, 7))
@@ -513,36 +566,43 @@ mod tests {
             model_def,
             ModelDefinition {
                 name: Identifier::new(
-                    Span::starts(Position::new(0, 6, 6)).ends(Position::new(0, 10, 10))
+                    Span::starts(Position::new(0, 6, 6)).ends(Position::new(0, 10, 10)),
+                    &source,
                 ),
                 fields: vec![
                     ModelFieldDefinition::new(
                         Identifier::new(
-                            Span::starts(Position::new(1, 4, 18)).ends(Position::new(1, 7, 21))
+                            Span::starts(Position::new(1, 4, 18)).ends(Position::new(1, 7, 21)),
+                            &source,
                         ),
                         Type::new(
-                            Span::starts(Position::new(1, 9, 23)).ends(Position::new(1, 14, 28))
+                            Span::starts(Position::new(1, 9, 23)).ends(Position::new(1, 14, 28)),
+                            &source,
                         )
                     ),
                     ModelFieldDefinition::new(
                         Identifier::new(
-                            Span::starts(Position::new(2, 4, 34)).ends(Position::new(2, 14, 44))
+                            Span::starts(Position::new(2, 4, 34)).ends(Position::new(2, 14, 44)),
+                            &source,
                         ),
                         Type::Optional {
                             inner: Box::new(Type::new(
                                 Span::starts(Position::new(2, 16, 46))
-                                    .ends(Position::new(2, 21, 51))
+                                    .ends(Position::new(2, 21, 51)),
+                                &source,
                             )),
                         }
                     ),
                     ModelFieldDefinition::new(
                         Identifier::new(
-                            Span::starts(Position::new(3, 4, 58)).ends(Position::new(3, 12, 66))
+                            Span::starts(Position::new(3, 4, 58)).ends(Position::new(3, 12, 66)),
+                            &source,
                         ),
                         Type::Array {
                             inner: Box::new(Type::new(
                                 Span::starts(Position::new(3, 14, 68))
-                                    .ends(Position::new(3, 19, 73))
+                                    .ends(Position::new(3, 19, 73)),
+                                &source,
                             )),
                         }
                     )

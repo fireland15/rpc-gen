@@ -3,6 +3,7 @@ use super::token::{Span, Token};
 #[derive(Debug, PartialEq, Clone)]
 pub struct ProtocolDefinition {
     pub models: Vec<ModelDefinition>,
+    pub scalars: Vec<ScalarDefinition>,
     pub methods: Vec<MethodDefinition>,
 }
 
@@ -17,6 +18,12 @@ pub struct MethodDefinition {
 pub struct MethodParameter {
     pub name: Identifier,
     pub ty: Type,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ScalarDefinition {
+    pub name: Identifier,
+    pub serialized: Identifier,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -40,12 +47,15 @@ impl ModelFieldDefinition {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Identifier {
     pub token: Token,
+    pub text: String,
 }
 
 impl Identifier {
-    pub fn new(span: Span) -> Self {
+    pub fn new(span: Span, src: &str) -> Self {
+        let text = src[span.start.index..span.end.index + 1].into();
         Identifier {
             token: Token::identifier(span),
+            text,
         }
     }
 }
@@ -68,9 +78,9 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn new(span: Span) -> Self {
+    pub fn new(span: Span, src: &str) -> Self {
         Self::Type {
-            identifier: Identifier::new(span),
+            identifier: Identifier::new(span, src),
         }
     }
 }

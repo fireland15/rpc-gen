@@ -22,6 +22,7 @@ pub enum TokenKind {
 pub enum KeywordKind {
     Rpc,
     Model,
+    Scalar,
 }
 
 impl FromStr for KeywordKind {
@@ -31,6 +32,7 @@ impl FromStr for KeywordKind {
         match s {
             "rpc" => Ok(KeywordKind::Rpc),
             "model" => Ok(KeywordKind::Model),
+            "scalar" => Ok(KeywordKind::Scalar),
             _ => Err(()),
         }
     }

@@ -1,7 +1,9 @@
 use std::{fs::File, io::Read};
 
+use generation::{protocol::build_protocol, typescript::generate_typescript};
 use parsing::parser;
 
+mod generation;
 mod parsing;
 
 fn main() {
@@ -11,6 +13,6 @@ fn main() {
         .expect("problem reading file");
 
     let ast = parser::parse(&contents).expect("problem parsing");
-
-    dbg!(ast);
+    let p = build_protocol(&ast).unwrap();
+    generate_typescript(&p);
 }

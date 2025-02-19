@@ -1,3 +1,7 @@
+scalar date string
+scalar uuid string
+scalar int number
+
 model ChangePasswordResponse {
     name    string
     details string 
@@ -17,12 +21,17 @@ model JournalEntry {
     updatedOn date
 }
 
+model CreateJournalEntryRequest {
+    file Upload
+    id int
+}
+
 rpc Signin(username string, password string) SigninResponse
 
-rpc Signout()
+rpc ExtendSession() void
 
-rpc ExtendSession()
+rpc Signout() void
 
 rpc ChangePassword(oldPassword string, newPassword string) ChangePasswordResponse
 
-rpc CreateJournalEntry() JournalEntry
+rpc CreateJournalEntry(request CreateJournalEntryRequest) JournalEntry
