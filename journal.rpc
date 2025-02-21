@@ -1,3 +1,7 @@
+scalar date = string
+scalar int = number
+scalar uuid = string
+
 model ChangePasswordResponse {
     name    string
     details string 

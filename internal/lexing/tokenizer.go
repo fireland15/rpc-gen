@@ -173,6 +173,19 @@ func (t *Tokenizer) Next() (Token, bool) {
 			}, err != nil
 		}
 
+		if t.source.Current() == '=' {
+			start := t.source.Position()
+			err := t.source.Bump()
+			return Token{
+				Type: TokenTypeEquals,
+				Text: "]",
+				Span: Span{
+					Start: start,
+					End:   start,
+				},
+			}, err != nil
+		}
+
 		fmt.Printf("unrecognized character '%c'\n", t.source.Current())
 		t.source.Bump()
 	}

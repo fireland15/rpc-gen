@@ -5,13 +5,14 @@ import (
 	"log"
 
 	"github.com/fireland15/rpc-gen/internal/config"
-	"github.com/fireland15/rpc-gen/internal/model"
+	"github.com/fireland15/rpc-gen/internal/generators/typescript"
+	"github.com/fireland15/rpc-gen/internal/protocol"
 )
 
 var ErrUndefinedClient = errors.New("no config for client")
 
 type CodeGenerator interface {
-	Generate(service *model.ProtocolDefinition) error
+	Generate(protocol *protocol.Protocol) error
 }
 
 type rootGenerator struct {
@@ -27,7 +28,7 @@ func GeneratorFromConfig(config *config.RpcGenConfig) (CodeGenerator, error) {
 	for client, clientConfig := range config.Clients {
 		log.Printf("Configuring %s client code generator.\n", client)
 		if client == "typescript" {
-			gen, err := NewTypescriptClientGenerator(clientConfig)
+			gen, err := typescript.NewTypescriptGenerator(clientConfig)
 			if err != nil {
 				return nil, err
 			}
@@ -35,23 +36,23 @@ func GeneratorFromConfig(config *config.RpcGenConfig) (CodeGenerator, error) {
 		}
 	}
 
-	for server, serverConfig := range config.Servers {
-		log.Printf("Configuring %s server code generator.\n", server)
-		if server == "go-echo" {
-			gen, err := NewGoEchoServerGenerator(serverConfig)
-			if err != nil {
-				return nil, err
-			}
-			generator.inner = append(generator.inner, gen)
-		}
-	}
+	// for server, serverConfig := range config.Servers {
+	// 	log.Printf("Configuring %s server code generator.\n", server)
+	// 	if server == "go-echo" {
+	// 		gen, err := NewGoEchoServerGenerator(serverConfig)
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 		generator.inner = append(generator.inner, gen)
+	// 	}
+	// }
 
 	return generator, nil
 }
 
-func (g *rootGenerator) Generate(service *model.ProtocolDefinition) error {
+func (g *rootGenerator) Generate(protocol *protocol.Protocol) error {
 	for _, generator := range g.inner {
-		err := generator.Generate(service)
+		err := generator.Generate(protocol)
 		if err != nil {
 			return err
 		}

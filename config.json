@@ -2,12 +2,7 @@
   "definition": "./journal.rpc",
   "clients": {
     "typescript": {
-      "output": "./out/service_client.gen.ts",
-      "types": {
-        "uuid": "string",
-        "date": "string",
-        "int": "number"
-      }
+      "output": "./out/service_client.gen.ts"
     }
   },
   "servers": {

@@ -31,9 +31,7 @@ func Compile(definitionPath string, config *config.RpcGenConfig) error {
 	}
 
 	errs := make([]string, 0)
-	analysis.GenerateMethodParameterModels(&service)
 	analysis.CheckTypeReferences(&errs, service)
-	analysis.CheckForDuplicateModelFields(&errs, service)
 
 	if len(errs) > 0 {
 		return fmt.Errorf("service definition errors:\n\n%s", strings.Join(errs, "\t\n"))
@@ -44,7 +42,7 @@ func Compile(definitionPath string, config *config.RpcGenConfig) error {
 		return err
 	}
 
-	err = goGen.Generate(&service)
+	err = goGen.Generate(service)
 	if err != nil {
 		return err
 	}

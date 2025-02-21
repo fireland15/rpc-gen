@@ -96,6 +96,6 @@ rpc SignOut() void`
 		return
 	}
 
-	ExpectEqual(t, "model count", 2, len(def.Models))
+	ExpectEqual(t, "model count", 2, len(def.Types))
 	ExpectEqual(t, "rpc count", 2, len(def.Methods))
 }

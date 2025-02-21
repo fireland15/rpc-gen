@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/fireland15/rpc-gen/internal/model"
+	"github.com/fireland15/rpc-gen/internal/protocol"
 )
 
 // Makes sure that type references have a corresponding definition
-func CheckTypeReferences(errors *[]string, service model.ProtocolDefinition) {
-	typeNames := getDefinedTypeNames(service.Models)
+func CheckTypeReferences(errors *[]string, service *protocol.Protocol) {
+	typeNames := getDefinedTypeNames(service.Types)
 
-	for _, m := range service.Models {
+	for _, m := range service.Types {
 		for _, field := range m.Fields {
 			if !isTypeDefined(typeNames, field.Type) {
 				msg := fmt.Sprintf("undefined type '%s'", field.Type.Name)
@@ -28,33 +28,35 @@ func CheckTypeReferences(errors *[]string, service model.ProtocolDefinition) {
 			}
 		}
 
-		if m.ReturnType != nil && !isTypeDefined(typeNames, *m.ReturnType) {
+		if m.ReturnType != nil && !isTypeDefined(typeNames, m.ReturnType) {
 			msg := fmt.Sprintf("undefined type '%s'", m.ReturnType.Name)
 			*errors = append(*errors, msg)
 		}
 	}
 }
 
-func isTypeDefined(definedTypes []string, ty model.Type) bool {
-	for ty.Variant != model.TypeVariantNamed {
-		if ty.Inner != nil {
-			ty = *ty.Inner
-		} else {
-			panic("non-named types should have an inner type.")
+func isTypeDefined(definedTypes []string, ty *protocol.TypeRef2) bool {
+	if !slices.Contains(definedTypes, ty.Name) {
+		return false
+	} else {
+		for idx := range ty.GenericArgs {
+			if !isTypeDefined(definedTypes, ty.GenericArgs[idx]) {
+				return false
+			}
 		}
 	}
 
-	return slices.Contains(definedTypes, ty.Name)
+	return true
 }
 
-func getDefinedTypeNames(models []model.Model) []string {
-	names := make([]string, len(models))
+func getDefinedTypeNames(typeDefinitions map[string]*protocol.TypeDefinition) []string {
+	names := make([]string, len(typeDefinitions))
 
-	for _, model := range models {
-		names = append(names, model.Name)
+	for _, typeDef := range typeDefinitions {
+		names = append(names, typeDef.Name)
 	}
 
-	names = append(names, "bool", "int", "string", "float", "uuid", "date")
+	names = append(names, "bool", "int", "string", "float", "uuid", "date", "Upload")
 
 	return names
 }
