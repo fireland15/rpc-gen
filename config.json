@@ -2,6 +2,7 @@
   "definition": "./journal.rpc",
   "clients": {
     "typescript": {
+      "template_path": "./internal/generators/typescript/sdk.ts.template",
       "output": "./out/service_client.gen.ts"
     }
   },

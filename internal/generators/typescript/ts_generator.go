@@ -19,7 +19,7 @@ type typescriptGenerator struct {
 
 type TypescriptConfig struct {
 	Output       string
-	TemplatePath *string
+	TemplatePath *string                `json:"template_path"`
 	Types        *map[string]typeConfig `json:"types"`
 }
 
@@ -106,15 +106,23 @@ func (g *typescriptGenerator) Generate(p *protocol.Protocol) error {
 	}
 	defer f.Close()
 
-	templ, err := template.New("ts-client").Funcs(funcs).Parse(clientTemplate)
+	out, err := RenderTSSDK(p)
 	if err != nil {
-		return fmt.Errorf("parsing error: %w", err)
+		return err
+	}
+	if _, err := f.WriteString(out); err != nil {
+		return fmt.Errorf("writing ts sdk to output: %w", err)
 	}
 
-	err = templ.ExecuteTemplate(f, "ts-client", p)
-	if err != nil {
-		return fmt.Errorf("executing template: %w", err)
-	}
+	//templ, err := template.New("ts-client").Funcs(funcs).Parse(clientTemplate)
+	//if err != nil {
+	//	return fmt.Errorf("parsing error: %w", err)
+	//}
+	//
+	//err = templ.ExecuteTemplate(f, "ts-client", p)
+	//if err != nil {
+	//	return fmt.Errorf("executing template: %w", err)
+	//}
 
 	return nil
 }
