@@ -1,0 +1,8 @@
+  const body = new FormData();
+  const fileMap = {} as Record<string, File>;
+  const payload = aliasFiles(data, fileMap);
+  body.append("payload", JSON.stringify(payload));
+  for (const id in fileMap) {
+    body.append(id, fileMap[id]);
+  }
+  req.body = body;

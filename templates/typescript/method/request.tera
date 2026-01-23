@@ -1,0 +1,15 @@
+{%- if method.parameters | length > 0 %}
+  const data = {
+{%- for param in method.parameters %}
+{%- if not param.client_side %}
+    {{ param.name }},
+{%- endif %}
+{%- endfor %}
+  };
+
+{%- if method.serialization_strategy == "json" %}
+{%- include "typescript/method/serialization/json.tera" %}
+{%- elif method.serialization_strategy == "multipart" %}
+{%- include "typescript/method/serialization/multipart.tera" %}
+{%- endif %}
+{%- endif %}

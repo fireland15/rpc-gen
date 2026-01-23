@@ -1,17 +1,14 @@
+use crate::generation::protocol::TypeDefinition;
 use std::fs::File;
 
-use crate::generation::protocol::TypeDefinition;
-
 use super::protocol::{Protocol, SerializationStrategy, TypeRef};
-use convert_case::Casing;
+use convert_case::{Case, Casing};
 use serde::Serialize;
 use tera::{Context, Tera, Value};
 
 pub fn generate_typescript(protocol: &Protocol) {
-    let mut tera = Tera::default();
-    tera.add_template_file("templates/typescript/ts_client.template", Some("ts-client"))
-        .unwrap();
-
+    let mut tera = Tera::new("templates/**/*").unwrap();
+    
     pub fn none(value: Option<&Value>, _args: &[Value]) -> tera::Result<bool> {
         Ok(value.unwrap().is_null())
     }
@@ -28,8 +25,9 @@ pub fn generate_typescript(protocol: &Protocol) {
     protocol.types.iter().for_each(|(name, ty)| match ty {
         TypeDefinition::Scalar { serialized_type } => {
             let scalar_def = TsScalarDefinition {
-                name: name.clone(),
+                name: name.to_case(Case::UpperCamel),
                 ty: serialized_type.clone(),
+                brand: name.to_case(Case::Camel),
             };
             ts_client.scalars.push(scalar_def);
         }
@@ -57,6 +55,7 @@ pub fn generate_typescript(protocol: &Protocol) {
                 .map(|(x, y)| TsMethodParameter {
                     name: x.clone(),
                     ty: type_ref_string(&y),
+                    client_side: false,
                 })
                 .collect(),
             &method.returns,
@@ -65,7 +64,7 @@ pub fn generate_typescript(protocol: &Protocol) {
         ts_client.methods.push(m);
     });
 
-    tera.render_to("ts-client", &Context::from_serialize(ts_client).unwrap(), f)
+    tera.render_to("typescript/ts_client.template", &Context::from_serialize(ts_client).unwrap(), f)
         .unwrap();
 }
 
@@ -80,6 +79,7 @@ struct TsClientDefinition {
 struct TsScalarDefinition {
     name: String,
     ty: String,
+    brand: String,
 }
 
 #[derive(Serialize)]
@@ -100,6 +100,9 @@ pub struct TsMethodDefinition {
 pub struct TsMethodParameter {
     name: String,
     ty: String,
+
+    /// Controls whether the method parameter is sent in the request body
+    client_side: bool,
 }
 
 impl TsMethodDefinition {
@@ -132,8 +135,12 @@ fn type_ref_string(type_ref: &TypeRef) -> String {
         TypeRef::Named { name } => {
             if name == "Upload" {
                 "File".into()
+            } else if name == "string" {
+                name.into()
+            } else if name == "void" {
+                name.into()
             } else {
-                name.clone()
+                name.to_case(Case::UpperCamel)
             }
         }
         TypeRef::Optional { inner } => format!("{} | null", type_ref_string(inner)),

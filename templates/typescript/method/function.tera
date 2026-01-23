@@ -1,0 +1,17 @@
+export async function {{ method.name }}(
+{%- include "typescript/method/signature.tera" %}
+): Promise<{{ method.returns }}> {
+  const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
+
+  const headers = new Headers(init?.headers);
+  const req = {
+    ...init,
+    method: "POST",
+    headers,
+  };
+
+{%- include "typescript/method/request.tera" %}
+  const response = await fetchFn(`${baseUrl}/{{ method.name }}`, req);
+
+{%- include "typescript/method/response.tera" %}
+}
