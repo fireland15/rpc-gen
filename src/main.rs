@@ -1,7 +1,9 @@
 use std::{fs::File, io::Read};
-
+use std::collections::{BTreeMap, HashMap};
+use crate::generation::cs::generate_csharp;
 use generation::{protocol::build_protocol, typescript::generate_typescript};
 use parsing::parser;
+use crate::generation::cs;
 
 mod generation;
 mod parsing;
@@ -15,4 +17,18 @@ fn main() {
     let ast = parser::parse(&contents).expect("problem parsing");
     let p = build_protocol(&ast).unwrap();
     generate_typescript(&p);
+
+    let mut cs_scalar_map = BTreeMap::new();
+    cs_scalar_map.insert("string".into(), "string".into());
+    cs_scalar_map.insert("date".into(), "DateTime".into());
+    cs_scalar_map.insert("int".into(), "int".into());
+    cs_scalar_map.insert("uuid".into(), "Guid".into());
+
+    generate_csharp(&p, &cs::Config{
+        out_dir: "out".into(),
+        namespace: "Test.Namespace".into(),
+        model_dir: "out/models".into(),
+        model_namespace: "Test.Namespace.Models".to_string(),
+        scalar_map: cs_scalar_map,
+    }).unwrap();
 }

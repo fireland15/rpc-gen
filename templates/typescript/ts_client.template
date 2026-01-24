@@ -21,30 +21,6 @@ export interface {{ type.name }} {
 {% include "typescript/method/function.tera" %}
 {%- endfor %}
 
-function aliasFiles<T>(
-  input: T,
-  map: Record<string, File> = {},
-  counter = { i: 0 },
-): T {
-  if (input instanceof File) {
-    const id = `__${counter.i++}`;
-    map[id] = input;
-    return id as unknown as T;
-  }
-
-  if (Array.isArray(input)) {
-    return input.map((v) => aliasFiles(v, map, counter)) as unknown as T;
-  }
-
-  if (typeof input === "object" && input !== null) {
-    return Object.fromEntries(
-      Object.entries(input).map(([k, v]) => [k, aliasFiles(v, map, counter)]),
-    ) as T;
-  }
-
-  return input;
-}
-
 async function parseJson<T>(response: Response): Promise<T> {
   ensureSuccess(response);
   return response.json() as Promise<T>;

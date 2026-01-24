@@ -1,0 +1,8 @@
+namespace {{ namespace }};
+
+public enum {{ model.name }}
+{
+{%- for variant in model.variants %}
+    {{ variant.name }} = "{{ variant.serialized_value }}",
+{%- endfor %}
+}

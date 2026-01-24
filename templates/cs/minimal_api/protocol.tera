@@ -1,0 +1,41 @@
+namespace {{ namespace }};
+
+{% for method in model %}
+public interface I{{method.name}}Handler
+{
+    Task{% if method.return_ty is not none %}<{{method.return_ty}}>{% endif %} HandleAsync(
+{%- for param in method.parameters %}
+        {{param.ty}} {{param.argument_name}},
+{%- endfor %}
+        CancellationToken cancellationToken = default);
+}
+{% endfor %}
+
+public static class ProtocolEndpoints
+{
+    public static void MapProtocol(this WebApplication app)
+    {
+{%- for method in model %}
+        app.MapPost("/{{method.path}}", Handle{{method.name}});
+{%- endfor %}
+    }
+
+{%- for method in model %}
+
+    private static async Task<IResult> Handle{{method.name}}(
+{%- if method.parameters | length != 0 %}
+        [FromBody] {{method.name}}Parameters parameters,
+{%- endif %}
+        [FromServices] I{{method.name}}Handler handler,
+        CancellationToken cancellationToken)
+    {
+{%- if method.return_ty is not none %}
+        var result = await handler.HandleAsync({% for param in method.parameters %}parameters.{{param.name}}, {% endfor %}cancellationToken);
+        return Results.Ok(result);
+{%- else %}
+        await handler.HandleAsync({% for param in method.parameters %}parameters.{{param.name}}, {% endfor %}cancellationToken);
+        return Results.NoContent();
+{%- endif %}
+    }
+{%- endfor %}
+}

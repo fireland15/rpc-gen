@@ -1,8 +1,8 @@
-use std::collections::BTreeMap;
 use convert_case::{Case, Casing};
 use serde::Serialize;
+use std::collections::BTreeMap;
 
-use crate::parsing::ast::{self};
+use crate::parsing::ast::{self, ModelFieldDefinition};
 
 pub fn build_protocol(x: &ast::ProtocolDefinition) -> Result<Protocol, ()> {
     let mut p = Protocol::new();
@@ -74,6 +74,7 @@ pub struct Protocol {
 #[derive(Clone, Debug, Serialize)]
 pub struct Method {
     pub name: String,
+    pub path: String,
     pub parameters: Vec<(String, TypeRef)>,
     pub returns: Option<TypeRef>,
     pub serialization_strategy: SerializationStrategy,
@@ -96,7 +97,19 @@ impl Protocol {
     pub fn add_model(&mut self, name: &str, fields: BTreeMap<String, TypeRef>) -> Result<(), ()> {
         if self
             .types
-            .insert(name.into(), TypeDefinition::Object { fields })
+            .insert(
+                name.into(),
+                TypeDefinition::Model(ModelDefinition {
+                    name: name.into(),
+                    fields: fields
+                        .iter()
+                        .map(|(k, v)| FieldDefinition {
+                            name: k.clone(),
+                            ty: v.clone(),
+                        })
+                        .collect(),
+                }),
+            )
             .is_some()
         {
             Err(())
@@ -108,7 +121,13 @@ impl Protocol {
     pub fn add_enum(&mut self, name: &str, variants: Vec<EnumVariant>) -> Result<(), ()> {
         if self
             .types
-            .insert(name.into(), TypeDefinition::Enum { variants })
+            .insert(
+                name.into(),
+                TypeDefinition::Enum(EnumDefinition {
+                    name: name.into(),
+                    variants,
+                }),
+            )
             .is_some()
         {
             Err(())
@@ -152,6 +171,7 @@ impl Protocol {
                 name.into(),
                 Method {
                     name: name.into(),
+                    path: name.to_case(Case::Snake),
                     parameters,
                     returns,
                     serialization_strategy,
@@ -168,8 +188,8 @@ impl Protocol {
     pub fn has_upload_field(&self, type_ref: &TypeRef) -> bool {
         match type_ref {
             TypeRef::Named { name } => match self.types.get(name) {
-                Some(TypeDefinition::Object { fields }) => {
-                    fields.iter().any(|(_, f)| self.has_upload_field(f))
+                Some(TypeDefinition::Model(ModelDefinition { fields, .. })) => {
+                    fields.iter().any(|f| self.has_upload_field(&f.ty))
                 }
                 _ => name == "Upload",
             },
@@ -183,8 +203,26 @@ impl Protocol {
 #[derive(Clone, Debug, Serialize)]
 pub enum TypeDefinition {
     Scalar { serialized_type: String },
-    Object { fields: BTreeMap<String, TypeRef> },
-    Enum { variants: Vec<EnumVariant> },
+    Model(ModelDefinition),
+    Enum(EnumDefinition),
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct ModelDefinition {
+    pub name: String,
+    pub fields: Vec<FieldDefinition>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct FieldDefinition {
+    pub name: String,
+    pub ty: TypeRef,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct EnumDefinition {
+    pub name: String,
+    pub variants: Vec<EnumVariant>,
 }
 
 #[derive(Clone, Debug, Serialize)]

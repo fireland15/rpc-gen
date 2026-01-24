@@ -11,7 +11,7 @@ export async function {{ method.name }}(
   };
 
 {%- include "typescript/method/request.tera" %}
-  const response = await fetchFn(`${baseUrl}/{{ method.name }}`, req);
+  const response = await fetchFn(`${baseUrl}/{{ method.path }}`, req);
 
 {%- include "typescript/method/response.tera" %}
 }

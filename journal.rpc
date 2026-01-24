@@ -22,7 +22,7 @@ model JournalEntry {
 }
 
 model CreateJournalEntryRequest {
-    file Upload
+    fileUri string
     id int
     type JournalType
 }
@@ -33,11 +33,16 @@ enum JournalType {
     YelloCarrots
 }
 
+enum CategoryType {
+    Income
+    Expense
+}
+
 rpc Signin(username string, password string) SigninResponse
 
-rpc ExtendSession() void
+rpc ExtendSession()
 
-rpc Signout() void
+rpc Signout()
 
 rpc ChangePassword(oldPassword string, newPassword string) ChangePasswordResponse
 

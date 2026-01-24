@@ -14,6 +14,13 @@ type Uuid = string & { __brand: "uuid"; };
 export const Uuid = (v: string) => v as Uuid;
 
 
+export const CategoryType = {
+  Income: "INCOME",
+  Expense: "EXPENSE",
+} as const;
+
+export type CategoryType = typeof CategoryType[keyof typeof CategoryType];
+
 export const JournalType = {
   Apples: "APPLES",
   Banans: "BANANS",
@@ -29,7 +36,7 @@ export interface ChangePasswordResponse {
 }
 
 export interface CreateJournalEntryRequest {
-    file: File;
+    fileUri: string;
     id: Int;
     type: JournalType;
 }
@@ -63,7 +70,7 @@ export async function changePassword(oldPassword: string,newPassword: string,ctx
   };  headers.set("Content-Type", "application/json");
   req.body = JSON.stringify(data);
 
-  const response = await fetchFn(`${baseUrl}/changePassword`, req);
+  const response = await fetchFn(`${baseUrl}/change_password`, req);
     return await parseJson<ChangePasswordResponse>(response);
 
 
@@ -81,24 +88,17 @@ export async function createJournalEntry(request: CreateJournalEntryRequest,ctx?
   };
   const data = {
     request,
-  };  const body = new FormData();
-  const fileMap = {} as Record<string, File>;
-  const payload = aliasFiles(data, fileMap);
-  body.append("payload", JSON.stringify(payload));
-  for (const id in fileMap) {
-    body.append(id, fileMap[id]);
-  }
-  req.body = body;
+  };  headers.set("Content-Type", "application/json");
+  req.body = JSON.stringify(data);
 
-
-  const response = await fetchFn(`${baseUrl}/createJournalEntry`, req);
+  const response = await fetchFn(`${baseUrl}/create_journal_entry`, req);
     return await parseJson<JournalEntry>(response);
 
 
 }
 
 export async function extendSession(ctx?: RequestContext
-): Promise<void> {
+): Promise<> {
   const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
 
   const headers = new Headers(init?.headers);
@@ -108,8 +108,8 @@ export async function extendSession(ctx?: RequestContext
     headers,
   };
 
-  const response = await fetchFn(`${baseUrl}/extendSession`, req);
-    return ensureSuccess(response);
+  const response = await fetchFn(`${baseUrl}/extend_session`, req);
+    return await parseJson<>(response);
 
 
 }
@@ -137,7 +137,7 @@ export async function signin(username: string,password: string,ctx?: RequestCont
 }
 
 export async function signout(ctx?: RequestContext
-): Promise<void> {
+): Promise<> {
   const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
 
   const headers = new Headers(init?.headers);
@@ -148,35 +148,11 @@ export async function signout(ctx?: RequestContext
   };
 
   const response = await fetchFn(`${baseUrl}/signout`, req);
-    return ensureSuccess(response);
+    return await parseJson<>(response);
 
 
 }
 
-
-function aliasFiles<T>(
-  input: T,
-  map: Record<string, File> = {},
-  counter = { i: 0 },
-): T {
-  if (input instanceof File) {
-    const id = `__${counter.i++}`;
-    map[id] = input;
-    return id as unknown as T;
-  }
-
-  if (Array.isArray(input)) {
-    return input.map((v) => aliasFiles(v, map, counter)) as unknown as T;
-  }
-
-  if (typeof input === "object" && input !== null) {
-    return Object.fromEntries(
-      Object.entries(input).map(([k, v]) => [k, aliasFiles(v, map, counter)]),
-    ) as T;
-  }
-
-  return input;
-}
 
 async function parseJson<T>(response: Response): Promise<T> {
   ensureSuccess(response);

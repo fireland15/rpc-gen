@@ -12,18 +12,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8b11b46a-6b41-4244-9de4-c8530faf2431" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/generation/cs/mod.rs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/templates/typescript/enum.tera" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/templates/typescript/scalar.tera" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/cs/common/enum.tera" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/cs/common/model.tera" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/cs/minimal_api/protocol.tera" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/api.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/journal.rpc" beforeDir="false" afterPath="$PROJECT_DIR$/journal.rpc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generation/cs/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/generation/cs.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/generation/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/generation/mod.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/generation/protocol.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/generation/protocol.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/generation/typescript.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/generation/typescript.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/parsing/ast.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/parsing/ast.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/parsing/parser.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/parsing/parser.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/parsing/token.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/parsing/token.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templates/typescript/method/function.tera" beforeDir="false" afterPath="$PROJECT_DIR$/templates/typescript/method/function.tera" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templates/typescript/ts_client.template" beforeDir="false" afterPath="$PROJECT_DIR$/templates/typescript/ts_client.template" afterDir="false" />
     </list>
@@ -103,6 +105,7 @@
     "nodejs_package_manager_path": "npm",
     "org.rust.cargo.project.model.PROJECT_DISCOVERY": "true",
     "org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon": "",
+    "org.rust.disableDetachedFileInspection/Users/forrestireland/code/rpc-gen/src/generation/cs.rs": "true",
     "ts.external.directory.path": "/Applications/RustRover.app/Contents/plugins/javascript-plugin/jsLanguageServicesImpl/external",
     "vue.rearranger.settings.migration": "true"
   }
@@ -178,7 +181,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1768970458996</updated>
-      <workItem from="1769061419652" duration="22226000" />
+      <workItem from="1769061419652" duration="37188000" />
     </task>
     <servers />
   </component>

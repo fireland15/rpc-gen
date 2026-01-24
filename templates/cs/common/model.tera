@@ -1,0 +1,9 @@
+namespace {{ namespace }};
+
+public record {{ model.name }}
+{
+{%- for property in model.properties %}
+    [JsonPropertyName("{{property.json_property_name}}")]
+    public{% if property.required %} required{% endif %} {{property.ty}} {{ property.name }} { get; init; }
+{%- endfor %}
+}

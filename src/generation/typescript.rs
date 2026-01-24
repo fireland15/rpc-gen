@@ -1,7 +1,8 @@
-use crate::generation::protocol::TypeDefinition;
+use crate::generation::protocol::{ModelDefinition, TypeDefinition};
 use std::fs::File;
 
 use super::protocol::{Protocol, SerializationStrategy, TypeRef};
+use crate::generation::protocol;
 use convert_case::{Case, Casing};
 use serde::Serialize;
 use tera::{Context, Tera, Value};
@@ -32,20 +33,20 @@ pub fn generate_typescript(protocol: &Protocol) {
             };
             ts_client.scalars.push(scalar_def);
         }
-        TypeDefinition::Object { fields } => {
+        TypeDefinition::Model(ModelDefinition { fields, .. }) => {
             let type_def = TsTypeDefinition {
                 name: name.clone(),
                 fields: fields
                     .iter()
-                    .map(|(name, ty)| TsFieldDefinition {
-                        name: name.clone(),
-                        ty: type_ref_string(ty),
+                    .map(|f| TsFieldDefinition {
+                        name: f.name.clone(),
+                        ty: type_ref_string(&f.ty),
                     })
                     .collect(),
             };
             ts_client.types.push(type_def);
         }
-        TypeDefinition::Enum { variants } => {
+        TypeDefinition::Enum(protocol::EnumDefinition { variants, .. }) => {
             let enum_def = TsEnumDefinition {
                 name: name.clone(),
                 variants: variants
@@ -63,6 +64,7 @@ pub fn generate_typescript(protocol: &Protocol) {
     protocol.methods.iter().for_each(|(_, method)| {
         let m = TsMethodDefinition::new(
             &method.name,
+            &method.path,
             method
                 .parameters
                 .iter()
@@ -122,6 +124,7 @@ struct TsEnumVariant {
 #[derive(Debug, Serialize)]
 pub struct TsMethodDefinition {
     name: String,
+    path: String,
     parameters: Vec<TsMethodParameter>,
     returns: Option<String>,
     serialization_strategy: String,
@@ -139,12 +142,14 @@ pub struct TsMethodParameter {
 impl TsMethodDefinition {
     fn new(
         name: &str,
+        path: &str,
         parameters: Vec<TsMethodParameter>,
         type_ref: &Option<TypeRef>,
         serialization_strategy: SerializationStrategy,
     ) -> Self {
         Self {
             name: name.to_case(convert_case::Case::Camel),
+            path: path.into(),
             parameters,
             returns: type_ref.as_ref().map(type_ref_string),
             serialization_strategy: match serialization_strategy {
