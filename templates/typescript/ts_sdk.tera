@@ -18,7 +18,7 @@ export interface {{ type.name }} {
 {% endfor %}
 
 {%- for method in methods %}
-{% include "typescript/method/function.tera" %}
+{% include "typescript/function.tera" %}
 {%- endfor %}
 
 async function parseJson<T>(response: Response): Promise<T> {

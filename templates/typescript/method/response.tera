@@ -1,5 +1,0 @@
-{% if method.returns is not none %}
-    return await parseJson<{{ method.returns }}>(response);
-{% else %}
-    return ensureSuccess(response);
-{% endif %}

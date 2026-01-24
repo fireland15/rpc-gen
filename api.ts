@@ -54,7 +54,7 @@ export interface SigninResponse {
     errors: string[];
 }
 
-export async function changePassword(oldPassword: string,newPassword: string,ctx?: RequestContext
+export async function changePassword(oldPassword: string,newPassword: string,ctx?: RequestContext,
 ): Promise<ChangePasswordResponse> {
   const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
 
@@ -71,13 +71,12 @@ export async function changePassword(oldPassword: string,newPassword: string,ctx
 
   headers.set("Content-Type", "application/json");
   req.body = JSON.stringify(data);
+
   const response = await fetchFn(`${baseUrl}/change_password`, req);
-    return await parseJson<ChangePasswordResponse>(response);
-
-
+  return await parseJson<ChangePasswordResponse>(response);
 }
 
-export async function createJournalEntry(request: CreateJournalEntryRequest,ctx?: RequestContext
+export async function createJournalEntry(request: CreateJournalEntryRequest,ctx?: RequestContext,
 ): Promise<JournalEntry> {
   const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
 
@@ -93,13 +92,12 @@ export async function createJournalEntry(request: CreateJournalEntryRequest,ctx?
 
   headers.set("Content-Type", "application/json");
   req.body = JSON.stringify(data);
+
   const response = await fetchFn(`${baseUrl}/create_journal_entry`, req);
-    return await parseJson<JournalEntry>(response);
-
-
+  return await parseJson<JournalEntry>(response);
 }
 
-export async function extendSession(ctx?: RequestContext
+export async function extendSession(ctx?: RequestContext,
 ): Promise<void> {
   const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
 
@@ -109,13 +107,12 @@ export async function extendSession(ctx?: RequestContext
     method: "POST",
     headers,
   };
+
   const response = await fetchFn(`${baseUrl}/extend_session`, req);
-    return ensureSuccess(response);
-
-
+  return ensureSuccess(response);
 }
 
-export async function signin(username: string,password: string,ctx?: RequestContext
+export async function signin(username: string,password: string,ctx?: RequestContext,
 ): Promise<SigninResponse> {
   const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
 
@@ -132,13 +129,12 @@ export async function signin(username: string,password: string,ctx?: RequestCont
 
   headers.set("Content-Type", "application/json");
   req.body = JSON.stringify(data);
+
   const response = await fetchFn(`${baseUrl}/signin`, req);
-    return await parseJson<SigninResponse>(response);
-
-
+  return await parseJson<SigninResponse>(response);
 }
 
-export async function signout(ctx?: RequestContext
+export async function signout(ctx?: RequestContext,
 ): Promise<void> {
   const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
 
@@ -148,10 +144,9 @@ export async function signout(ctx?: RequestContext
     method: "POST",
     headers,
   };
+
   const response = await fetchFn(`${baseUrl}/signout`, req);
-    return ensureSuccess(response);
-
-
+  return ensureSuccess(response);
 }
 
 

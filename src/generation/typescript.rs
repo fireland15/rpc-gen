@@ -80,7 +80,7 @@ pub fn generate_typescript(protocol: &Protocol) {
     });
 
     tera.render_to(
-        "typescript/ts_client.template",
+        "typescript/ts_sdk.tera",
         &Context::from_serialize(ts_client).unwrap(),
         f,
     )

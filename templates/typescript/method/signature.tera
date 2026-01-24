@@ -1,4 +1,0 @@
-{%- for param in method.parameters -%}
-{{ param.name }}: {{ param.ty }},
-{%- endfor -%}
-ctx?: RequestContext
