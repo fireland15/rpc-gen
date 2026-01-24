@@ -23,6 +23,7 @@ pub enum KeywordKind {
     Rpc,
     Model,
     Scalar,
+    Enum,
 }
 
 impl FromStr for KeywordKind {
@@ -33,6 +34,7 @@ impl FromStr for KeywordKind {
             "rpc" => Ok(KeywordKind::Rpc),
             "model" => Ok(KeywordKind::Model),
             "scalar" => Ok(KeywordKind::Scalar),
+            "enum" => Ok(KeywordKind::Enum),
             _ => Err(()),
         }
     }

@@ -1,0 +1,4 @@
+{%- for scalar in scalars %}
+type {{ scalar.name }} = {{ scalar.ty }} & { __brand: "{{ scalar.brand }}"; };
+export const {{ scalar.name }} = (v: {{ scalar.ty }}) => v as {{ scalar.name }};
+{% endfor %}

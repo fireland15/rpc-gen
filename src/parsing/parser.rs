@@ -1,9 +1,4 @@
-use std::{clone, iter::Peekable};
-
-use crate::parsing::{
-    ast::{Identifier, ModelFieldDefinition},
-    char_positions::CharPositionIterators,
-};
+use std::iter::Peekable;
 
 use super::{
     ast::{
@@ -12,6 +7,11 @@ use super::{
     },
     token::{KeywordKind, Span, Token, TokenKind},
     tokens::Tokens,
+};
+use crate::parsing::ast::{EnumDefinition, EnumVariant};
+use crate::parsing::{
+    ast::{Identifier, ModelFieldDefinition},
+    char_positions::CharPositionIterators,
 };
 
 pub fn parse(source: &str) -> Result<ProtocolDefinition, Vec<ParseError>> {
@@ -44,6 +44,7 @@ impl<'a> Parser<'a> {
             models: Vec::new(),
             methods: Vec::new(),
             scalars: Vec::new(),
+            enums: Vec::new(),
         };
         let mut errors = Vec::new();
         while let Some(token) = self.tokens.peek() {
@@ -64,6 +65,15 @@ impl<'a> Parser<'a> {
                     Ok(def) => service.scalars.push(def),
                     Err(err) => errors.push(err),
                 },
+                Token {
+                    kind: TokenKind::Keyword(KeywordKind::Enum),
+                    ..
+                } => {
+                    match self.parse_enum_definition() {
+                        Ok(def) => service.enums.push(def),
+                        Err(err) => errors.push(err),
+                    };
+                }
                 Token {
                     kind: TokenKind::Keyword(KeywordKind::Rpc),
                     ..
@@ -291,6 +301,67 @@ impl<'a> Parser<'a> {
         });
     }
 
+    fn parse_enum_definition(&mut self) -> Result<EnumDefinition, ParseError> {
+        let token = self.tokens.next().ok_or(ParseError::UnexpectedEndOfInput)?;
+        let Token {
+            kind: TokenKind::Keyword(KeywordKind::Enum),
+            ..
+        } = token
+        else {
+            return Err(self.unexpected(TokenKind::Keyword(KeywordKind::Enum), &token));
+        };
+
+        let identifier_token = self.tokens.next().ok_or(ParseError::UnexpectedEndOfInput)?;
+        let Token {
+            kind: TokenKind::Identifier,
+            ..
+        } = identifier_token
+        else {
+            return Err(self.unexpected(TokenKind::Identifier, &identifier_token));
+        };
+
+        let Some(Token {
+            kind: TokenKind::LeftSquiggle,
+            ..
+        }) = self.tokens.peek()
+        else {
+            return Err(self.unexpected(TokenKind::LeftSquiggle, &token));
+        };
+        self.tokens.next();
+
+        // parse enum variants
+
+        let mut variants = Vec::new();
+
+        loop {
+            let Some(Token {
+                kind: TokenKind::Identifier,
+                ..
+            }) = self.tokens.peek()
+            else {
+                break;
+            };
+            let token = self.tokens.next().expect("already checked this was Some");
+            let identifier = Identifier::new(token.span, &self.source);
+
+            variants.push(EnumVariant { name: identifier });
+        }
+
+        let token = self.tokens.next().ok_or(ParseError::UnexpectedEndOfInput)?;
+        let Token {
+            kind: TokenKind::RightSquiggle,
+            ..
+        } = token
+        else {
+            return Err(self.unexpected(TokenKind::RightSquiggle, &token));
+        };
+
+        return Ok(EnumDefinition {
+            name: Identifier::new(identifier_token.span, &self.source),
+            variants,
+        });
+    }
+
     fn parse_type(&mut self) -> Result<Type, ParseError> {
         let token = self.tokens.next().ok_or(ParseError::UnexpectedEndOfInput)?;
         let Token {
@@ -380,14 +451,14 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
+    use super::Parser;
+    use crate::parsing::ast::{EnumDefinition, EnumVariant};
     use crate::parsing::{
         ast::{Identifier, ModelDefinition, ModelFieldDefinition, Type},
         char_positions::{CharPositionIterators, Position},
         token::{Span, Token, TokenKind},
         tokens::Tokens,
     };
-
-    use super::Parser;
 
     #[test]
     fn parses_plain_type() {
@@ -609,5 +680,72 @@ mod tests {
                 ]
             }
         )
+    }
+
+    #[test]
+    fn parses_enum_definition() {
+        let source = r#"enum Color {
+    Red
+    Green
+    Blue
+}"#;
+
+        let mut p = Parser {
+            source,
+            tokens: Tokens::new(source.char_indices().char_positions()).peekable(),
+        };
+
+        let enum_def = p
+            .parse_enum_definition()
+            .expect("failed to parse enum definition");
+
+        assert_eq!(
+            enum_def,
+            EnumDefinition {
+                name: Identifier::new(
+                    Span::starts(Position::new(0, 5, 5)).ends(Position::new(0, 9, 9)),
+                    &source,
+                ),
+                variants: vec![
+                    EnumVariant {
+                        name: Identifier::new(
+                            Span::starts(Position::new(1, 4, 17)).ends(Position::new(1, 6, 19)),
+                            &source,
+                        )
+                    },
+                    EnumVariant {
+                        name: Identifier::new(
+                            Span::starts(Position::new(2, 4, 25)).ends(Position::new(2, 8, 29)),
+                            &source,
+                        )
+                    },
+                    EnumVariant {
+                        name: Identifier::new(
+                            Span::starts(Position::new(3, 4, 35)).ends(Position::new(3, 7, 38)),
+                            &source,
+                        )
+                    },
+                ]
+            }
+        );
+    }
+
+    #[test]
+    fn parses_single_variant_enum() {
+        let source = r#"enum Truth {
+    True
+}"#;
+
+        let mut p = Parser {
+            source,
+            tokens: Tokens::new(source.char_indices().char_positions()).peekable(),
+        };
+
+        let enum_def = p
+            .parse_enum_definition()
+            .expect("failed to parse enum definition");
+
+        assert_eq!(enum_def.variants.len(), 1);
+        assert_eq!(enum_def.variants[0].name.text, "True");
     }
 }

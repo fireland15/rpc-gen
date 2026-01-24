@@ -1,0 +1,9 @@
+{%- for enum in enums %}
+export const {{ enum.name }} = {
+{%- for variant in enum.variants %}
+  {{ variant.name }}: "{{ variant.value }}",
+{%- endfor %}
+} as const;
+
+export type {{ enum.name }} = typeof {{ enum.name }}[keyof typeof {{ enum.name }}];
+{% endfor %}

@@ -4,6 +4,7 @@ use super::token::{Span, Token};
 pub struct ProtocolDefinition {
     pub models: Vec<ModelDefinition>,
     pub scalars: Vec<ScalarDefinition>,
+    pub enums: Vec<EnumDefinition>,
     pub methods: Vec<MethodDefinition>,
 }
 
@@ -41,6 +42,23 @@ pub struct ModelFieldDefinition {
 impl ModelFieldDefinition {
     pub fn new(name: Identifier, ty: Type) -> Self {
         Self { name, ty }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct EnumDefinition {
+    pub name: Identifier,
+    pub variants: Vec<EnumVariant>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct EnumVariant {
+    pub name: Identifier,
+}
+
+impl EnumVariant {
+    pub fn new(name: Identifier) -> Self {
+        Self { name }
     }
 }
 

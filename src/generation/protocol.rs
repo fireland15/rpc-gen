@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-
+use convert_case::{Case, Casing};
 use serde::Serialize;
 
 use crate::parsing::ast::{self};
@@ -31,6 +31,19 @@ pub fn build_protocol(x: &ast::ProtocolDefinition) -> Result<Protocol, ()> {
         )
         .unwrap();
     });
+    x.enums.iter().for_each(|e| {
+        p.add_enum(
+            &e.name.text,
+            e.variants
+                .iter()
+                .map(|x| EnumVariant {
+                    name: x.name.text.clone(),
+                    serialized_value: x.name.text.to_case(Case::UpperSnake),
+                })
+                .collect(),
+        )
+        .unwrap();
+    });
     Ok(p)
 }
 
@@ -52,13 +65,13 @@ fn make_type_ref(ty: &ast::Type) -> TypeRef {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Protocol {
     pub types: BTreeMap<String, TypeDefinition>,
     pub methods: BTreeMap<String, Method>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Method {
     pub name: String,
     pub parameters: Vec<(String, TypeRef)>,
@@ -83,7 +96,19 @@ impl Protocol {
     pub fn add_model(&mut self, name: &str, fields: BTreeMap<String, TypeRef>) -> Result<(), ()> {
         if self
             .types
-            .insert(name.into(), TypeDefinition::Object { fields: fields })
+            .insert(name.into(), TypeDefinition::Object { fields })
+            .is_some()
+        {
+            Err(())
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn add_enum(&mut self, name: &str, variants: Vec<EnumVariant>) -> Result<(), ()> {
+        if self
+            .types
+            .insert(name.into(), TypeDefinition::Enum { variants })
             .is_some()
         {
             Err(())
@@ -155,10 +180,17 @@ impl Protocol {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub enum TypeDefinition {
     Scalar { serialized_type: String },
     Object { fields: BTreeMap<String, TypeRef> },
+    Enum { variants: Vec<EnumVariant> },
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct EnumVariant {
+    pub name: String,
+    pub serialized_value: String,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize)]

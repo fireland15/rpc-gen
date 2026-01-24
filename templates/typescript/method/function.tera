@@ -4,7 +4,7 @@ export async function {{ method.name }}(
   const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
 
   const headers = new Headers(init?.headers);
-  const req = {
+  const req: RequestInit = {
     ...init,
     method: "POST",
     headers,

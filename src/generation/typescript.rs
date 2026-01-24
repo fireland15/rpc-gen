@@ -8,7 +8,7 @@ use tera::{Context, Tera, Value};
 
 pub fn generate_typescript(protocol: &Protocol) {
     let mut tera = Tera::new("templates/**/*").unwrap();
-    
+
     pub fn none(value: Option<&Value>, _args: &[Value]) -> tera::Result<bool> {
         Ok(value.unwrap().is_null())
     }
@@ -18,6 +18,7 @@ pub fn generate_typescript(protocol: &Protocol) {
 
     let mut ts_client = TsClientDefinition {
         scalars: Vec::new(),
+        enums: Vec::new(),
         types: Vec::new(),
         methods: Vec::new(),
     };
@@ -44,6 +45,19 @@ pub fn generate_typescript(protocol: &Protocol) {
             };
             ts_client.types.push(type_def);
         }
+        TypeDefinition::Enum { variants } => {
+            let enum_def = TsEnumDefinition {
+                name: name.clone(),
+                variants: variants
+                    .iter()
+                    .map(|v| TsEnumVariant {
+                        name: v.name.clone(),
+                        value: v.serialized_value.clone(),
+                    })
+                    .collect(),
+            };
+            ts_client.enums.push(enum_def);
+        }
     });
 
     protocol.methods.iter().for_each(|(_, method)| {
@@ -64,8 +78,12 @@ pub fn generate_typescript(protocol: &Protocol) {
         ts_client.methods.push(m);
     });
 
-    tera.render_to("typescript/ts_client.template", &Context::from_serialize(ts_client).unwrap(), f)
-        .unwrap();
+    tera.render_to(
+        "typescript/ts_client.template",
+        &Context::from_serialize(ts_client).unwrap(),
+        f,
+    )
+    .unwrap();
 }
 
 #[derive(Serialize)]
@@ -73,6 +91,7 @@ struct TsClientDefinition {
     scalars: Vec<TsScalarDefinition>,
     types: Vec<TsTypeDefinition>,
     methods: Vec<TsMethodDefinition>,
+    enums: Vec<TsEnumDefinition>,
 }
 
 #[derive(Serialize)]
@@ -86,6 +105,18 @@ struct TsScalarDefinition {
 struct TsTypeDefinition {
     name: String,
     fields: Vec<TsFieldDefinition>,
+}
+
+#[derive(Serialize)]
+struct TsEnumDefinition {
+    name: String,
+    variants: Vec<TsEnumVariant>,
+}
+
+#[derive(Serialize)]
+struct TsEnumVariant {
+    name: String,
+    value: String,
 }
 
 #[derive(Debug, Serialize)]

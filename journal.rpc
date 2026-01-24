@@ -24,6 +24,13 @@ model JournalEntry {
 model CreateJournalEntryRequest {
     file Upload
     id int
+    type JournalType
+}
+
+enum JournalType {
+    Apples
+    Banans
+    YelloCarrots
 }
 
 rpc Signin(username string, password string) SigninResponse
