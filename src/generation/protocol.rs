@@ -1,8 +1,7 @@
+use crate::parsing::ast;
 use convert_case::{Case, Casing};
 use serde::Serialize;
 use std::collections::BTreeMap;
-
-use crate::parsing::ast::{self, ModelFieldDefinition};
 
 pub fn build_protocol(x: &ast::ProtocolDefinition) -> Result<Protocol, ()> {
     let mut p = Protocol::new();
@@ -77,13 +76,6 @@ pub struct Method {
     pub path: String,
     pub parameters: Vec<(String, TypeRef)>,
     pub returns: Option<TypeRef>,
-    pub serialization_strategy: SerializationStrategy,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub enum SerializationStrategy {
-    Multipart,
-    Json,
 }
 
 impl Protocol {
@@ -159,12 +151,6 @@ impl Protocol {
         parameters: Vec<(String, TypeRef)>,
         returns: Option<TypeRef>,
     ) -> Result<(), ()> {
-        let serialization_strategy = if parameters.iter().any(|(_, ty)| self.has_upload_field(ty)) {
-            SerializationStrategy::Multipart
-        } else {
-            SerializationStrategy::Json
-        };
-
         if self
             .methods
             .insert(
@@ -174,7 +160,6 @@ impl Protocol {
                     path: name.to_case(Case::Snake),
                     parameters,
                     returns,
-                    serialization_strategy,
                 },
             )
             .is_some()
@@ -182,20 +167,6 @@ impl Protocol {
             Err(())
         } else {
             Ok(())
-        }
-    }
-
-    pub fn has_upload_field(&self, type_ref: &TypeRef) -> bool {
-        match type_ref {
-            TypeRef::Named { name } => match self.types.get(name) {
-                Some(TypeDefinition::Model(ModelDefinition { fields, .. })) => {
-                    fields.iter().any(|f| self.has_upload_field(&f.ty))
-                }
-                _ => name == "Upload",
-            },
-            TypeRef::Optional { inner } => self.has_upload_field(&inner),
-            TypeRef::Array { inner } => self.has_upload_field(&inner),
-            TypeRef::Generic { inner, .. } => self.has_upload_field(&inner),
         }
     }
 }

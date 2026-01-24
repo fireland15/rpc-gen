@@ -1,9 +1,9 @@
-use std::{fs::File, io::Read};
-use std::collections::{BTreeMap, HashMap};
+use crate::generation::cs;
 use crate::generation::cs::generate_csharp;
 use generation::{protocol::build_protocol, typescript::generate_typescript};
 use parsing::parser;
-use crate::generation::cs;
+use std::collections::BTreeMap;
+use std::{fs::File, io::Read};
 
 mod generation;
 mod parsing;
@@ -24,11 +24,17 @@ fn main() {
     cs_scalar_map.insert("int".into(), "int".into());
     cs_scalar_map.insert("uuid".into(), "Guid".into());
 
-    generate_csharp(&p, &cs::Config{
-        out_dir: "out".into(),
-        namespace: "Test.Namespace".into(),
-        model_dir: "out/models".into(),
-        model_namespace: "Test.Namespace.Models".to_string(),
-        scalar_map: cs_scalar_map,
-    }).unwrap();
+    generate_csharp(
+        &p,
+        &cs::Config {
+            out_dir: "out".into(),
+            namespace: "Test.Namespace".into(),
+            model_dir: "out/models".into(),
+            model_namespace: "Test.Namespace.Models".to_string(),
+            interfaces_dir: "out/Abstractions".into(),
+            interfaces_namespace: "Test.Namespace.Abstractions".to_string(),
+            scalar_map: cs_scalar_map,
+        },
+    )
+    .unwrap();
 }

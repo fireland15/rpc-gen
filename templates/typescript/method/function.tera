@@ -1,6 +1,6 @@
 export async function {{ method.name }}(
 {%- include "typescript/method/signature.tera" %}
-): Promise<{{ method.returns }}> {
+): Promise<{% if method.returns is none %}void{% else%}{{ method.returns }}{%endif%}> {
   const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
 
   const headers = new Headers(init?.headers);

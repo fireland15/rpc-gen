@@ -1,0 +1,10 @@
+namespace {{ namespace }};
+
+public interface I{{model.name}}Handler
+{
+    Task{% if model.return_ty is not none %}<{{model.return_ty}}>{% endif %} HandleAsync(
+{%- for param in model.parameters %}
+        {{param.ty}} {{param.argument_name}},
+{%- endfor %}
+        CancellationToken cancellationToken = default);
+}

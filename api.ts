@@ -67,9 +67,10 @@ export async function changePassword(oldPassword: string,newPassword: string,ctx
   const data = {
     oldPassword,
     newPassword,
-  };  headers.set("Content-Type", "application/json");
-  req.body = JSON.stringify(data);
+  };
 
+  headers.set("Content-Type", "application/json");
+  req.body = JSON.stringify(data);
   const response = await fetchFn(`${baseUrl}/change_password`, req);
     return await parseJson<ChangePasswordResponse>(response);
 
@@ -88,9 +89,10 @@ export async function createJournalEntry(request: CreateJournalEntryRequest,ctx?
   };
   const data = {
     request,
-  };  headers.set("Content-Type", "application/json");
-  req.body = JSON.stringify(data);
+  };
 
+  headers.set("Content-Type", "application/json");
+  req.body = JSON.stringify(data);
   const response = await fetchFn(`${baseUrl}/create_journal_entry`, req);
     return await parseJson<JournalEntry>(response);
 
@@ -98,7 +100,7 @@ export async function createJournalEntry(request: CreateJournalEntryRequest,ctx?
 }
 
 export async function extendSession(ctx?: RequestContext
-): Promise<> {
+): Promise<void> {
   const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
 
   const headers = new Headers(init?.headers);
@@ -107,9 +109,8 @@ export async function extendSession(ctx?: RequestContext
     method: "POST",
     headers,
   };
-
   const response = await fetchFn(`${baseUrl}/extend_session`, req);
-    return await parseJson<>(response);
+    return ensureSuccess(response);
 
 
 }
@@ -127,9 +128,10 @@ export async function signin(username: string,password: string,ctx?: RequestCont
   const data = {
     username,
     password,
-  };  headers.set("Content-Type", "application/json");
-  req.body = JSON.stringify(data);
+  };
 
+  headers.set("Content-Type", "application/json");
+  req.body = JSON.stringify(data);
   const response = await fetchFn(`${baseUrl}/signin`, req);
     return await parseJson<SigninResponse>(response);
 
@@ -137,7 +139,7 @@ export async function signin(username: string,password: string,ctx?: RequestCont
 }
 
 export async function signout(ctx?: RequestContext
-): Promise<> {
+): Promise<void> {
   const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
 
   const headers = new Headers(init?.headers);
@@ -146,9 +148,8 @@ export async function signout(ctx?: RequestContext
     method: "POST",
     headers,
   };
-
   const response = await fetchFn(`${baseUrl}/signout`, req);
-    return await parseJson<>(response);
+    return ensureSuccess(response);
 
 
 }

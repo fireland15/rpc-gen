@@ -1,15 +1,16 @@
 use crate::generation::protocol::{ModelDefinition, TypeDefinition};
 use std::fs::File;
 
-use super::protocol::{Protocol, SerializationStrategy, TypeRef};
+use super::protocol::{Protocol, TypeRef};
 use crate::generation::protocol;
+use crate::generation::tera_helpers::register_tera_testers;
 use convert_case::{Case, Casing};
 use serde::Serialize;
 use tera::{Context, Tera, Value};
 
 pub fn generate_typescript(protocol: &Protocol) {
     let mut tera = Tera::new("templates/**/*").unwrap();
-
+    register_tera_testers(&mut tera);
     pub fn none(value: Option<&Value>, _args: &[Value]) -> tera::Result<bool> {
         Ok(value.unwrap().is_null())
     }
@@ -39,7 +40,7 @@ pub fn generate_typescript(protocol: &Protocol) {
                 fields: fields
                     .iter()
                     .map(|f| TsFieldDefinition {
-                        name: f.name.clone(),
+                        name: f.name.to_case(Case::Camel),
                         ty: type_ref_string(&f.ty),
                     })
                     .collect(),
@@ -69,13 +70,11 @@ pub fn generate_typescript(protocol: &Protocol) {
                 .parameters
                 .iter()
                 .map(|(x, y)| TsMethodParameter {
-                    name: x.clone(),
+                    name: x.to_case(Case::Camel),
                     ty: type_ref_string(&y),
-                    client_side: false,
                 })
                 .collect(),
             &method.returns,
-            method.serialization_strategy.clone(),
         );
         ts_client.methods.push(m);
     });
@@ -127,16 +126,12 @@ pub struct TsMethodDefinition {
     path: String,
     parameters: Vec<TsMethodParameter>,
     returns: Option<String>,
-    serialization_strategy: String,
 }
 
 #[derive(Debug, Serialize)]
 pub struct TsMethodParameter {
     name: String,
     ty: String,
-
-    /// Controls whether the method parameter is sent in the request body
-    client_side: bool,
 }
 
 impl TsMethodDefinition {
@@ -145,17 +140,12 @@ impl TsMethodDefinition {
         path: &str,
         parameters: Vec<TsMethodParameter>,
         type_ref: &Option<TypeRef>,
-        serialization_strategy: SerializationStrategy,
     ) -> Self {
         Self {
-            name: name.to_case(convert_case::Case::Camel),
+            name: name.to_case(Case::Camel),
             path: path.into(),
             parameters,
             returns: type_ref.as_ref().map(type_ref_string),
-            serialization_strategy: match serialization_strategy {
-                SerializationStrategy::Multipart => "multipart".into(),
-                SerializationStrategy::Json => "json".into(),
-            },
         }
     }
 }
@@ -169,9 +159,7 @@ struct TsFieldDefinition {
 fn type_ref_string(type_ref: &TypeRef) -> String {
     match &type_ref {
         TypeRef::Named { name } => {
-            if name == "Upload" {
-                "File".into()
-            } else if name == "string" {
+            if name == "string" {
                 name.into()
             } else if name == "void" {
                 name.into()
