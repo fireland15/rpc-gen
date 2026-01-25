@@ -1,4 +1,4 @@
-use crate::generation::protocol;
+use crate::protocol;
 use convert_case::{Case, Casing};
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -47,7 +47,7 @@ impl CsModel {
             properties: model_def
                 .fields
                 .iter()
-                .map(|f| CsProperty {
+                .map(|(_, f)| CsProperty {
                     name: f.name.to_case(Case::UpperCamel),
                     ty: type_ref_string(&f.ty, &cfg.scalar_map),
                     required: !matches!(f.ty, protocol::TypeRef::Optional { .. }),
@@ -83,10 +83,10 @@ impl CsMethod {
             parameters: method
                 .parameters
                 .iter()
-                .map(|(n, ty)| MethodParameter {
-                    name: n.to_case(Case::UpperCamel),
-                    argument_name: n.to_case(Case::Camel),
-                    ty: type_ref_string(ty, &cfg.scalar_map),
+                .map(|m| MethodParameter {
+                    name: m.name.to_case(Case::UpperCamel),
+                    argument_name: m.name.to_case(Case::Camel),
+                    ty: type_ref_string(&m.ty, &cfg.scalar_map),
                 })
                 .collect(),
             return_ty: method

@@ -1,4 +1,3 @@
-{%- for scalar in scalars %}
-type {{ scalar.name }} = {{ scalar.ty }} & { __brand: "{{ scalar.brand }}"; };
-export const {{ scalar.name }} = (v: {{ scalar.ty }}) => v as {{ scalar.name }};
-{% endfor %}
+type {{ item.name | to_case(case="upper_camel") }} = {{ item.serialized_type }} & { __brand: "{{ item.name | to_case(case="snake") }}"; };
+export const as{{ item.name | to_case(case="upper_camel") }} = (v: {{ item.serialized_type }}) => v as {{ item.name | to_case(case="upper_camel") }};
+

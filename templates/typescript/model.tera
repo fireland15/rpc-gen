@@ -1,0 +1,6 @@
+export interface {{ item.name | to_case(case="upper_camel") }} {
+{%- for _, field in item.fields %}
+    {{ field.serialized_name }}: {{ field.ty | resolve_type_ref }};
+{%- endfor %}
+}
+

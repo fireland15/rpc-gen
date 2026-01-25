@@ -1,16 +1,5 @@
 namespace {{ namespace }};
 
-{% for method in model %}
-public interface I{{method.name}}Handler
-{
-    Task{% if method.return_ty is not none %}<{{method.return_ty}}>{% endif %} HandleAsync(
-{%- for param in method.parameters %}
-        {{param.ty}} {{param.argument_name}},
-{%- endfor %}
-        CancellationToken cancellationToken = default);
-}
-{% endfor %}
-
 public static class ProtocolEndpoints
 {
     public static void MapProtocol(this WebApplication app)

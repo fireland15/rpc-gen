@@ -12,17 +12,24 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8b11b46a-6b41-4244-9de4-c8530faf2431" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/templates/typescript/function.tera" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/protocol/builder.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/protocol/mod.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/typescript/model.tera" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/api.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/generation/go.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/generation/go.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generation/cs/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/generation/cs/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generation/cs/model.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/generation/cs/model.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generation/go.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generation/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/generation/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generation/protocol.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/generation/tera_helpers.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/generation/tera_helpers.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/generation/typescript.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/generation/typescript.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/typescript/go/echo_server.template" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/typescript/method/function.tera" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/typescript/method/request.tera" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/typescript/method/response.tera" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/typescript/method/signature.tera" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/typescript/ts_client.template" beforeDir="false" afterPath="$PROJECT_DIR$/templates/typescript/ts_sdk.tera" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/cs/minimal_api/protocol.tera" beforeDir="false" afterPath="$PROJECT_DIR$/templates/cs/minimal_api/protocol.tera" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/typescript/enum.tera" beforeDir="false" afterPath="$PROJECT_DIR$/templates/typescript/enum.tera" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/typescript/function.tera" beforeDir="false" afterPath="$PROJECT_DIR$/templates/typescript/function.tera" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/typescript/scalar.tera" beforeDir="false" afterPath="$PROJECT_DIR$/templates/typescript/scalar.tera" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/typescript/ts_sdk.tera" beforeDir="false" afterPath="$PROJECT_DIR$/templates/typescript/preamble.tera" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -105,6 +112,11 @@
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/templates/typescript" />
+    </key>
+  </component>
   <component name="RunManager" selected="Cargo.Run rpc-gen">
     <configuration name="Run rpc-gen" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="buildProfileId" value="dev" />
@@ -176,7 +188,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1768970458996</updated>
-      <workItem from="1769061419652" duration="40587000" />
+      <workItem from="1769061419652" duration="66916000" />
     </task>
     <servers />
   </component>

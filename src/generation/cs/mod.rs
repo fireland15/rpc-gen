@@ -2,8 +2,9 @@ mod model;
 
 pub(crate) use crate::generation::cs::model::Config;
 use crate::generation::cs::model::{type_ref_string, CsFile, CsMethod, CsModel, CsProperty};
-use crate::generation::protocol;
+
 use crate::generation::tera_helpers::register_tera_testers;
+use crate::protocol;
 use convert_case::{Case, Casing};
 use std::fs;
 use std::fs::File;
@@ -18,7 +19,7 @@ pub fn generate_csharp(protocol: &protocol::Protocol, cfg: &Config) -> Result<()
     let file_path = Path::new(cfg.model_dir.as_str());
     fs::create_dir_all(file_path).unwrap();
 
-    for (_, ty) in protocol.types.iter() {
+    for (_, ty) in protocol.schema().types.iter() {
         match ty {
             protocol::TypeDefinition::Enum(enum_def) => {
                 render_enum(&mut tera, enum_def, cfg)?;
@@ -30,17 +31,17 @@ pub fn generate_csharp(protocol: &protocol::Protocol, cfg: &Config) -> Result<()
         }
     }
 
-    for (_, method) in protocol.methods.iter() {
+    for (_, method) in protocol.schema().methods.iter() {
         let name = format!("{}Parameters", &method.name);
         if method.parameters.len() == 0 {
             continue;
         }
         let mut params_class = CsModel::new(&name);
-        for (name, ty) in method.parameters.iter() {
+        for param in method.parameters.iter() {
             params_class.properties.push(CsProperty {
                 name: name.to_case(Case::UpperCamel),
-                ty: type_ref_string(&ty, &cfg.scalar_map),
-                required: !matches!(ty, protocol::TypeRef::Optional { .. }),
+                ty: type_ref_string(&param.ty, &cfg.scalar_map),
+                required: !matches!(param.ty, protocol::TypeRef::Optional { .. }),
                 json_property_name: name.to_case(Case::Camel),
             })
         }
@@ -132,6 +133,7 @@ fn render_methods(tera: &mut Tera, protocol: &protocol::Protocol, cfg: &Config) 
         &Context::from_serialize(CsFile {
             namespace: cfg.namespace.clone(),
             model: protocol
+                .schema()
                 .methods
                 .iter()
                 .map(|(n, m)| CsMethod::new(&m, cfg))
@@ -153,7 +155,11 @@ fn render_interfaces(
     let file_path = Path::new(cfg.interfaces_dir.as_str());
     fs::create_dir_all(file_path).unwrap();
 
-    let mut it = protocol.methods.iter().map(|(n, m)| CsMethod::new(&m, cfg));
+    let mut it = protocol
+        .schema()
+        .methods
+        .iter()
+        .map(|(n, m)| CsMethod::new(&m, cfg));
 
     for method in it {
         let file_name = format!("I{}Handler.cs", &method.name);

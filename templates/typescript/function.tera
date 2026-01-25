@@ -1,9 +1,9 @@
-export async function {{ method.name }}(
-{%- for param in method.parameters -%}
+export async function {{ item.name }}(
+{%- for param in item.parameters -%}
 {{ param.name }}: {{ param.ty }},
 {%- endfor -%}
 ctx?: RequestContext,
-): Promise<{% if method.returns is none %}void{% else%}{{ method.returns }}{%endif%}> {
+): Promise<{% if item.returns is none %}void{% else%}{{ item.returns | resolve_type_ref }}{%endif%}> {
   const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
 
   const headers = new Headers(init?.headers);
@@ -13,9 +13,9 @@ ctx?: RequestContext,
     headers,
   };
   
-{%- if method.parameters | length > 0 %}
+{%- if item.parameters | length > 0 %}
   const data = {
-{%- for param in method.parameters %}
+{%- for param in item.parameters %}
     {{ param.name }},
 {%- endfor %}
   };
@@ -24,11 +24,12 @@ ctx?: RequestContext,
   req.body = JSON.stringify(data);
 {%- endif %}
 
-  const response = await fetchFn(`${baseUrl}/{{ method.path }}`, req);
+  const response = await fetchFn(`${baseUrl}/{{ item.path }}`, req);
 
-{%- if method.returns is not none %}
-  return await parseJson<{{ method.returns }}>(response);
+{%- if item.returns is not none %}
+  return await parseJson<{{ item.returns | resolve_type_ref }}>(response);
 {%- else %}
   return ensureSuccess(response);
 {%- endif %}
 }
+

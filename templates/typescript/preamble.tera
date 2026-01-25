@@ -5,22 +5,6 @@ export type RequestContext = Partial<Omit<RequestInit, "method" | "body">>  & {
   fetch?: typeof fetch;
 };
 
-{%- include "typescript/scalar.tera" %}
-
-{%- include "typescript/enum.tera" %}
-
-{%- for type in types %}
-export interface {{ type.name }} {
-{%- for field in type.fields %}
-    {{ field.name }}: {{ field.ty }};
-{%- endfor %}
-}
-{% endfor %}
-
-{%- for method in methods %}
-{% include "typescript/function.tera" %}
-{%- endfor %}
-
 async function parseJson<T>(response: Response): Promise<T> {
   ensureSuccess(response);
   return response.json() as Promise<T>;
@@ -51,3 +35,4 @@ class ApiError extends Error {
     super(`HTTP ${status}: ${body}`);
   }
 }
+

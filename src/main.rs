@@ -1,12 +1,14 @@
-use crate::generation::cs;
 use crate::generation::cs::generate_csharp;
-use generation::{protocol::build_protocol, typescript::generate_typescript};
+use crate::generation::{cs, typescript};
+use crate::protocol::build_protocol;
+use generation::typescript::generate_typescript;
 use parsing::parser;
 use std::collections::BTreeMap;
 use std::{fs::File, io::Read};
 
 mod generation;
 mod parsing;
+mod protocol;
 
 fn main() {
     let mut file = File::open("journal.rpc").expect("Failed to open file");
@@ -16,7 +18,14 @@ fn main() {
 
     let ast = parser::parse(&contents).expect("problem parsing");
     let p = build_protocol(&ast).unwrap();
-    generate_typescript(&p);
+    generate_typescript(
+        &p,
+        &typescript::Config {
+            out_dir: "out/ts_sdk".into(),
+            sdk_file: Some("sdk.ts".into()),
+        },
+    )
+    .unwrap();
 
     let mut cs_scalar_map = BTreeMap::new();
     cs_scalar_map.insert("string".into(), "string".into());
@@ -27,11 +36,11 @@ fn main() {
     generate_csharp(
         &p,
         &cs::Config {
-            out_dir: "out".into(),
+            out_dir: "out/cs".into(),
             namespace: "Test.Namespace".into(),
-            model_dir: "out/models".into(),
+            model_dir: "out/cs/models".into(),
             model_namespace: "Test.Namespace.Models".to_string(),
-            interfaces_dir: "out/Abstractions".into(),
+            interfaces_dir: "out/cs/Abstractions".into(),
             interfaces_namespace: "Test.Namespace.Abstractions".to_string(),
             scalar_map: cs_scalar_map,
         },

@@ -1,164 +1,109 @@
-use crate::generation::protocol::{ModelDefinition, TypeDefinition};
-use std::fs::File;
+use crate::generation::tera_helpers::{
+    register_tera_filters, register_tera_testers, RenderContext,
+};
 
-use super::protocol::{Protocol, TypeRef};
-use crate::generation::protocol;
-use crate::generation::tera_helpers::register_tera_testers;
+use crate::protocol;
+use crate::protocol::TypeDefinition;
 use convert_case::{Case, Casing};
 use serde::Serialize;
-use tera::{Context, Tera, Value};
+use std::fs;
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
+use tera::{Context, Error, Tera};
 
-pub fn generate_typescript(protocol: &Protocol) {
-    let mut tera = Tera::new("templates/**/*").unwrap();
+pub struct Config {
+    pub out_dir: String,
+    pub sdk_file: Option<String>,
+}
+
+#[derive(Debug)]
+pub enum GeneratorError {
+    TemplateError(String),
+    FileError(String),
+}
+
+impl GeneratorError {
+    fn from_tera(err: Error) -> Self {
+        Self::TemplateError(err.to_string())
+    }
+
+    fn file_error(err: std::io::Error) -> Self {
+        Self::FileError(err.to_string())
+    }
+}
+pub fn generate_typescript(
+    protocol: &protocol::Protocol,
+    cfg: &Config,
+) -> Result<(), GeneratorError> {
+    let tera = setup_tera()?;
+
+    if let Some(sdk_file) = &cfg.sdk_file {
+        let mut f = create_output_file(&cfg.out_dir, sdk_file)?;
+        render_sdk(&tera, protocol, &mut f)?;
+        f.flush().map_err(GeneratorError::file_error)?;
+    }
+
+    Ok(())
+}
+
+fn setup_tera() -> Result<Tera, GeneratorError> {
+    let mut tera = Tera::new("templates/**/*").map_err(GeneratorError::from_tera)?;
+
     register_tera_testers(&mut tera);
-    pub fn none(value: Option<&Value>, _args: &[Value]) -> tera::Result<bool> {
-        Ok(value.unwrap().is_null())
+    register_tera_filters(&mut tera, type_ref_string);
+
+    Ok(tera)
+}
+
+fn create_output_file(out_dir: &str, file_name: &str) -> Result<File, GeneratorError> {
+    let dir = Path::new(out_dir);
+    fs::create_dir_all(dir).map_err(GeneratorError::file_error)?;
+    let path = dir.join(file_name);
+    File::create(path).map_err(GeneratorError::file_error)
+}
+
+fn render_sdk(
+    tera: &Tera,
+    protocol: &protocol::Protocol,
+    mut out: impl Write,
+) -> Result<(), GeneratorError> {
+    tera.render_to("typescript/preamble.tera", &Context::new(), &mut out)
+        .map_err(GeneratorError::from_tera)?;
+
+    fn new_ctx<T: Serialize>(rc: RenderContext<T>) -> Result<Context, GeneratorError> {
+        Context::from_serialize(rc).map_err(GeneratorError::from_tera)
     }
-    tera.register_tester("null", none);
 
-    let f = File::create("api.ts").unwrap();
+    for type_def in protocol.types().values() {
+        let (template, ctx) = match type_def {
+            TypeDefinition::Scalar(s) => {
+                ("typescript/scalar.tera", new_ctx(RenderContext::new(s))?)
+            }
+            TypeDefinition::Model(m) => ("typescript/model.tera", new_ctx(RenderContext::new(m))?),
+            TypeDefinition::Enum(e) => ("typescript/enum.tera", new_ctx(RenderContext::new(e))?),
+        };
 
-    let mut ts_client = TsClientDefinition {
-        scalars: Vec::new(),
-        enums: Vec::new(),
-        types: Vec::new(),
-        methods: Vec::new(),
-    };
-
-    protocol.types.iter().for_each(|(name, ty)| match ty {
-        TypeDefinition::Scalar { serialized_type } => {
-            let scalar_def = TsScalarDefinition {
-                name: name.to_case(Case::UpperCamel),
-                ty: serialized_type.clone(),
-                brand: name.to_case(Case::Camel),
-            };
-            ts_client.scalars.push(scalar_def);
-        }
-        TypeDefinition::Model(ModelDefinition { fields, .. }) => {
-            let type_def = TsTypeDefinition {
-                name: name.clone(),
-                fields: fields
-                    .iter()
-                    .map(|f| TsFieldDefinition {
-                        name: f.name.to_case(Case::Camel),
-                        ty: type_ref_string(&f.ty),
-                    })
-                    .collect(),
-            };
-            ts_client.types.push(type_def);
-        }
-        TypeDefinition::Enum(protocol::EnumDefinition { variants, .. }) => {
-            let enum_def = TsEnumDefinition {
-                name: name.clone(),
-                variants: variants
-                    .iter()
-                    .map(|v| TsEnumVariant {
-                        name: v.name.clone(),
-                        value: v.serialized_value.clone(),
-                    })
-                    .collect(),
-            };
-            ts_client.enums.push(enum_def);
-        }
-    });
-
-    protocol.methods.iter().for_each(|(_, method)| {
-        let m = TsMethodDefinition::new(
-            &method.name,
-            &method.path,
-            method
-                .parameters
-                .iter()
-                .map(|(x, y)| TsMethodParameter {
-                    name: x.to_case(Case::Camel),
-                    ty: type_ref_string(&y),
-                })
-                .collect(),
-            &method.returns,
-        );
-        ts_client.methods.push(m);
-    });
-
-    tera.render_to(
-        "typescript/ts_sdk.tera",
-        &Context::from_serialize(ts_client).unwrap(),
-        f,
-    )
-    .unwrap();
-}
-
-#[derive(Serialize)]
-struct TsClientDefinition {
-    scalars: Vec<TsScalarDefinition>,
-    types: Vec<TsTypeDefinition>,
-    methods: Vec<TsMethodDefinition>,
-    enums: Vec<TsEnumDefinition>,
-}
-
-#[derive(Serialize)]
-struct TsScalarDefinition {
-    name: String,
-    ty: String,
-    brand: String,
-}
-
-#[derive(Serialize)]
-struct TsTypeDefinition {
-    name: String,
-    fields: Vec<TsFieldDefinition>,
-}
-
-#[derive(Serialize)]
-struct TsEnumDefinition {
-    name: String,
-    variants: Vec<TsEnumVariant>,
-}
-
-#[derive(Serialize)]
-struct TsEnumVariant {
-    name: String,
-    value: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TsMethodDefinition {
-    name: String,
-    path: String,
-    parameters: Vec<TsMethodParameter>,
-    returns: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TsMethodParameter {
-    name: String,
-    ty: String,
-}
-
-impl TsMethodDefinition {
-    fn new(
-        name: &str,
-        path: &str,
-        parameters: Vec<TsMethodParameter>,
-        type_ref: &Option<TypeRef>,
-    ) -> Self {
-        Self {
-            name: name.to_case(Case::Camel),
-            path: path.into(),
-            parameters,
-            returns: type_ref.as_ref().map(type_ref_string),
-        }
+        tera.render_to(template, &ctx, &mut out)
+            .map_err(GeneratorError::from_tera)?;
     }
+
+    for (_, method) in protocol.methods() {
+        tera.render_to(
+            "typescript/function.tera",
+            &Context::from_serialize(RenderContext::new(method))
+                .map_err(GeneratorError::from_tera)?,
+            &mut out,
+        )
+        .map_err(GeneratorError::from_tera)?;
+    }
+
+    Ok(())
 }
 
-#[derive(Serialize)]
-struct TsFieldDefinition {
-    name: String,
-    ty: String,
-}
-
-fn type_ref_string(type_ref: &TypeRef) -> String {
+fn type_ref_string(type_ref: &protocol::TypeRef) -> String {
     match &type_ref {
-        TypeRef::Named { name } => {
+        protocol::TypeRef::Named { name } => {
             if name == "string" {
                 name.into()
             } else if name == "void" {
@@ -167,9 +112,9 @@ fn type_ref_string(type_ref: &TypeRef) -> String {
                 name.to_case(Case::UpperCamel)
             }
         }
-        TypeRef::Optional { inner } => format!("{} | null", type_ref_string(inner)),
-        TypeRef::Array { inner } => format!("{}[]", type_ref_string(inner)),
-        TypeRef::Generic { inner, parameters } => {
+        protocol::TypeRef::Optional { inner } => format!("{} | null", type_ref_string(inner)),
+        protocol::TypeRef::Array { inner } => format!("{}[]", type_ref_string(inner)),
+        protocol::TypeRef::Generic { inner, parameters } => {
             let generic_params = parameters
                 .iter()
                 .map(type_ref_string)
