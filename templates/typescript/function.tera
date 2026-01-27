@@ -1,30 +1,39 @@
 export async function {{ item.name }}(
-{%- for param in item.parameters -%}
-{{ param.name }}: {{ param.ty }},
-{%- endfor -%}
-ctx?: RequestContext,
+{%- for _, param in item.parameters %}
+  {{ param.name }}: {{ param.ty | resolve_type_ref }}, {% endfor %}
+  ctx?: RequestContext,
 ): Promise<{% if item.returns is none %}void{% else%}{{ item.returns | resolve_type_ref }}{%endif%}> {
   const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
 
   const headers = new Headers(init?.headers);
   const req: RequestInit = {
     ...init,
-    method: "POST",
+    method: "{{ item.http_method }}",
     headers,
   };
+
+  const url = new URL("/{{ item.path }}", baseUrl);
   
 {%- if item.parameters | length > 0 %}
   const data = {
-{%- for param in item.parameters %}
+{%- for _, param in item.parameters %}
     {{ param.name }},
 {%- endfor %}
   };
 
+{%- if item.kind == "Mutation" %}
   headers.set("Content-Type", "application/json");
   req.body = JSON.stringify(data);
 {%- endif %}
+{%- if item.kind == "Query" %}
+  const queryParams = objectToQueryParams(data);
+  if (queryParams) {
+    url.search = queryParams;
+  }
+{%- endif %}
+{%- endif %}
 
-  const response = await fetchFn(`${baseUrl}/{{ item.path }}`, req);
+  const response = await fetchFn(url.toString(), req);
 
 {%- if item.returns is not none %}
   return await parseJson<{{ item.returns | resolve_type_ref }}>(response);

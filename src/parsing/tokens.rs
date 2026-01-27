@@ -134,19 +134,19 @@ mod tests {
 
     #[test]
     fn tokenizes_keywords() {
-        let mut tokens = Tokens::new("rpc model".char_indices().char_positions());
+        let mut tokens = Tokens::new("query model".char_indices().char_positions());
         assert_eq!(
             tokens.next().expect("a token"),
             Token {
-                kind: TokenKind::Keyword(KeywordKind::Rpc),
-                span: Span::starts(Position::new(0, 0, 0)).ends(Position::new(0, 2, 2))
+                kind: TokenKind::Keyword(KeywordKind::Query),
+                span: Span::starts(Position::new(0, 0, 0)).ends(Position::new(0, 4, 4))
             }
         );
         assert_eq!(
             tokens.next().expect("a token"),
             Token {
                 kind: TokenKind::Keyword(KeywordKind::Model),
-                span: Span::starts(Position::new(0, 4, 4)).ends(Position::new(0, 8, 8))
+                span: Span::starts(Position::new(0, 6, 6)).ends(Position::new(0, 10, 10))
             }
         );
         assert_eq!(tokens.next(), None);

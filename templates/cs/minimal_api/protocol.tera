@@ -4,25 +4,36 @@ public static class ProtocolEndpoints
 {
     public static void MapProtocol(this WebApplication app)
     {
-{%- for method in model %}
+{%- for _, method in item.methods %}
+{%- if method.kind == "Mutation" %}
         app.MapPost("/{{method.path}}", Handle{{method.name}});
+{%- endif %}
+{%- if method.kind == "Query" %}
+        app.MapGet("/{{method.path}}", Handle{{method.name}});
+{%- endif %}
 {%- endfor %}
     }
 
-{%- for method in model %}
+{%- for _, method in item.methods %}
 
     private static async Task<IResult> Handle{{method.name}}(
 {%- if method.parameters | length != 0 %}
+{%- if method.kind == "Mutation" %}
         [FromBody] {{method.name}}Parameters parameters,
+{%- elif method.kind == "Query" %}
+{%- for _, param in method.parameters %}
+        [FromQuery(Name = "{{param.serialized_name}}")] {{param.ty | resolve_type_ref }} {{param.name}},
+{%- endfor %}
+{%- endif %}
 {%- endif %}
         [FromServices] I{{method.name}}Handler handler,
         CancellationToken cancellationToken)
     {
-{%- if method.return_ty is not none %}
-        var result = await handler.HandleAsync({% for param in method.parameters %}parameters.{{param.name}}, {% endfor %}cancellationToken);
+{%- if method.returns is not none %}
+        var result = await handler.HandleAsync({% for _, param in method.parameters %}parameters.{{ param.name | to_case(case="upper_camel") }}, {% endfor %}cancellationToken);
         return Results.Ok(result);
 {%- else %}
-        await handler.HandleAsync({% for param in method.parameters %}parameters.{{param.name}}, {% endfor %}cancellationToken);
+        await handler.HandleAsync({% for _, param in method.parameters %}parameters.{{ param.name | to_case(case="upper_camel") }}, {% endfor %}cancellationToken);
         return Results.NoContent();
 {%- endif %}
     }

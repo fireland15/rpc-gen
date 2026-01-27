@@ -2,6 +2,7 @@ use crate::generation::tera_helpers::{
     register_tera_filters, register_tera_testers, RenderContext,
 };
 
+use crate::generation::error::GeneratorError;
 use crate::protocol;
 use crate::protocol::TypeDefinition;
 use convert_case::{Case, Casing};
@@ -10,37 +11,21 @@ use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
-use tera::{Context, Error, Tera};
+use tera::{Context, Tera};
 
 pub struct Config {
     pub out_dir: String,
     pub sdk_file: Option<String>,
 }
 
-#[derive(Debug)]
-pub enum GeneratorError {
-    TemplateError(String),
-    FileError(String),
-}
-
-impl GeneratorError {
-    fn from_tera(err: Error) -> Self {
-        Self::TemplateError(err.to_string())
-    }
-
-    fn file_error(err: std::io::Error) -> Self {
-        Self::FileError(err.to_string())
-    }
-}
 pub fn generate_typescript(
     protocol: &protocol::Protocol,
     cfg: &Config,
 ) -> Result<(), GeneratorError> {
     let tera = setup_tera()?;
-
     if let Some(sdk_file) = &cfg.sdk_file {
         let mut f = create_output_file(&cfg.out_dir, sdk_file)?;
-        render_sdk(&tera, protocol, &mut f)?;
+        render_sdk(&tera, &protocol, &mut f)?;
         f.flush().map_err(GeneratorError::file_error)?;
     }
 
@@ -95,7 +80,8 @@ fn render_sdk(
                 .map_err(GeneratorError::from_tera)?,
             &mut out,
         )
-        .map_err(GeneratorError::from_tera)?;
+        .unwrap();
+        //.map_err(GeneratorError::from_tera)?;
     }
 
     Ok(())

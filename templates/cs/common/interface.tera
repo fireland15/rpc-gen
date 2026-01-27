@@ -1,10 +1,10 @@
 namespace {{ namespace }};
 
-public interface I{{model.name}}Handler
+public interface I{{item.name}}Handler
 {
-    Task{% if model.return_ty is not none %}<{{model.return_ty}}>{% endif %} HandleAsync(
-{%- for param in model.parameters %}
-        {{param.ty}} {{param.argument_name}},
+    Task{% if item.return_ty is not none %}<{{item.return_ty}}>{% endif %} HandleAsync(
+{%- for _, param in item.parameters %}
+        {{ param.ty | resolve_type_ref }} {{ param.name | to_case(case="camel") }},
 {%- endfor %}
         CancellationToken cancellationToken = default);
 }

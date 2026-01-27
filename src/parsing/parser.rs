@@ -13,6 +13,8 @@ use crate::parsing::{
     ast::{Identifier, ModelFieldDefinition},
     char_positions::CharPositionIterators,
 };
+use crate::protocol;
+use crate::protocol::MethodKind;
 
 pub fn parse(source: &str) -> Result<ProtocolDefinition, Vec<ParseError>> {
     let mut parser = Parser {
@@ -75,19 +77,39 @@ impl<'a> Parser<'a> {
                     };
                 }
                 Token {
-                    kind: TokenKind::Keyword(KeywordKind::Rpc),
+                    kind: TokenKind::Keyword(KeywordKind::Query),
                     ..
                 } => {
-                    match self.parse_method_definition() {
+                    match self.parse_method_definition(KeywordKind::Query) {
+                        Ok(def) => service.methods.push(def),
+                        Err(err) => errors.push(err),
+                    };
+                }
+                Token {
+                    kind: TokenKind::Keyword(KeywordKind::Mutation),
+                    ..
+                } => {
+                    match self.parse_method_definition(KeywordKind::Mutation) {
+                        Ok(def) => service.methods.push(def),
+                        Err(err) => errors.push(err),
+                    };
+                }
+                Token {
+                    kind: TokenKind::Keyword(KeywordKind::Stream),
+                    ..
+                } => {
+                    match self.parse_method_definition(KeywordKind::Stream) {
                         Ok(def) => service.methods.push(def),
                         Err(err) => errors.push(err),
                     };
                 }
                 _ => {
                     let token = self.tokens.next().expect("already checked that is Some");
-                    self.unexpected(TokenKind::Keyword(KeywordKind::Model), &token);
-                    self.unexpected(TokenKind::Keyword(KeywordKind::Rpc), &token);
-                    self.unexpected(TokenKind::Keyword(KeywordKind::Scalar), &token);
+                    errors.push(self.unexpected(TokenKind::Keyword(KeywordKind::Model), &token));
+                    errors.push(self.unexpected(TokenKind::Keyword(KeywordKind::Query), &token));
+                    errors.push(self.unexpected(TokenKind::Keyword(KeywordKind::Mutation), &token));
+                    errors.push(self.unexpected(TokenKind::Keyword(KeywordKind::Stream), &token));
+                    errors.push(self.unexpected(TokenKind::Keyword(KeywordKind::Scalar), &token));
                 }
             }
         }
@@ -99,7 +121,7 @@ impl<'a> Parser<'a> {
 
     fn unexpected(&self, expected: TokenKind, token: &Token) -> ParseError {
         ParseError::UnexpectedSymbol {
-            expected: expected,
+            expected,
             actual: token.kind.clone(),
             actual_text: self.get_text(&token.span).into(),
             span: token.span.clone(),
@@ -144,15 +166,22 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_method_definition(&mut self) -> Result<MethodDefinition, ParseError> {
+    fn parse_method_definition(
+        &mut self,
+        method_kind: KeywordKind,
+    ) -> Result<MethodDefinition, ParseError> {
         let token = self.tokens.next().ok_or(ParseError::UnexpectedEndOfInput)?;
         let Token {
-            kind: TokenKind::Keyword(KeywordKind::Rpc),
+            kind: TokenKind::Keyword(kk),
             ..
-        } = token
+        } = &token
         else {
-            return Err(self.unexpected(TokenKind::Keyword(KeywordKind::Rpc), &token));
+            return Err(self.unexpected(TokenKind::Keyword(method_kind), &token));
         };
+
+        if *kk != method_kind {
+            return Err(self.unexpected(TokenKind::Keyword(method_kind), &token));
+        }
 
         let identifier_token = self.tokens.next().ok_or(ParseError::UnexpectedEndOfInput)?;
         let Token {
@@ -223,13 +252,15 @@ impl<'a> Parser<'a> {
             let return_ty = self.parse_type()?;
             Ok(MethodDefinition {
                 name: Identifier::new(identifier_token.span, &self.source),
-                parameters: parameters,
+                kind: to_method_kind(&method_kind),
+                parameters,
                 return_ty: Some(return_ty),
             })
         } else {
             Ok(MethodDefinition {
                 name: Identifier::new(identifier_token.span, &self.source),
-                parameters: parameters,
+                kind: to_method_kind(&method_kind),
+                parameters,
                 return_ty: None,
             })
         }
@@ -446,6 +477,15 @@ impl<'a> Parser<'a> {
         }
 
         return Ok(ty);
+    }
+}
+
+fn to_method_kind(kw: &KeywordKind) -> MethodKind {
+    match kw {
+        KeywordKind::Query => MethodKind::Query,
+        KeywordKind::Mutation => MethodKind::Mutation,
+        KeywordKind::Stream => MethodKind::Stream,
+        _ => panic!("you shouldn't be trying to map a keyword for methods to method kinds."),
     }
 }
 

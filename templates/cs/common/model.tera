@@ -1,9 +1,9 @@
 namespace {{ namespace }};
 
-public record {{ model.name }}
+public record {{ item.name }}
 {
-{%- for property in model.properties %}
-    [JsonPropertyName("{{property.json_property_name}}")]
-    public{% if property.required %} required{% endif %} {{property.ty}} {{ property.name }} { get; init; }
+{%- for _, property in item.fields %}
+    [JsonPropertyName("{{property.serialized_name}}")]
+    public{% if property.required %} required{% endif %} {{ property.ty | resolve_type_ref }} {{ property.name | to_case(case="upper_camel") }} { get; init; }
 {%- endfor %}
 }

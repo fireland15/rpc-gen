@@ -4,6 +4,7 @@ use crate::protocol::build_protocol;
 use generation::typescript::generate_typescript;
 use parsing::parser;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 use std::{fs::File, io::Read};
 
 mod generation;
@@ -33,17 +34,15 @@ fn main() {
     cs_scalar_map.insert("int".into(), "int".into());
     cs_scalar_map.insert("uuid".into(), "Guid".into());
 
-    generate_csharp(
-        &p,
-        &cs::Config {
-            out_dir: "out/cs".into(),
-            namespace: "Test.Namespace".into(),
-            model_dir: "out/cs/models".into(),
-            model_namespace: "Test.Namespace.Models".to_string(),
-            interfaces_dir: "out/cs/Abstractions".into(),
-            interfaces_namespace: "Test.Namespace.Abstractions".to_string(),
-            scalar_map: cs_scalar_map,
-        },
-    )
-    .unwrap();
+    let cs_cfg = cs::Config {
+        out_dir: "out/cs".into(),
+        namespace: "Test.Namespace".into(),
+        model_dir: "out/cs/models".into(),
+        model_namespace: "Test.Namespace.Models".to_string(),
+        interfaces_dir: "out/cs/Abstractions".into(),
+        interfaces_namespace: "Test.Namespace.Abstractions".to_string(),
+        scalar_map: Arc::new(cs_scalar_map),
+    };
+
+    generate_csharp(&p, &cs_cfg).unwrap();
 }

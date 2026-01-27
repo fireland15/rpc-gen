@@ -38,12 +38,14 @@ enum CategoryType {
     Expense
 }
 
-rpc Signin(username string, password string) SigninResponse
+mutation Signin(username string, password string) SigninResponse
 
-rpc ExtendSession()
+mutation ExtendSession()
 
-rpc Signout()
+mutation Signout()
 
-rpc ChangePassword(oldPassword string, newPassword string) ChangePasswordResponse
+mutation ChangePassword(oldPassword string, newPassword string) ChangePasswordResponse
 
-rpc CreateJournalEntry(request CreateJournalEntryRequest) JournalEntry
+mutation CreateJournalEntry(request CreateJournalEntryRequest) JournalEntry
+
+query GetJournalEntry(id uuid) JournalEntry

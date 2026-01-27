@@ -20,7 +20,9 @@ pub enum TokenKind {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum KeywordKind {
-    Rpc,
+    Query,
+    Mutation,
+    Stream,
     Model,
     Scalar,
     Enum,
@@ -31,7 +33,9 @@ impl FromStr for KeywordKind {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "rpc" => Ok(KeywordKind::Rpc),
+            "query" => Ok(KeywordKind::Query),
+            "mutation" => Ok(KeywordKind::Mutation),
+            "stream" => Ok(KeywordKind::Stream),
             "model" => Ok(KeywordKind::Model),
             "scalar" => Ok(KeywordKind::Scalar),
             "enum" => Ok(KeywordKind::Enum),

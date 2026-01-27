@@ -5,25 +5,8 @@ use convert_case::{Case, Casing};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+use crate::protocol::builder::ProtocolError;
 pub use builder::build_protocol;
-
-fn make_type_ref(ty: &ast::Type) -> TypeRef {
-    match ty {
-        ast::Type::Type { identifier } => TypeRef::Named {
-            name: identifier.text.clone(),
-        },
-        ast::Type::Optional { inner } => TypeRef::Optional {
-            inner: Box::new(make_type_ref(inner)),
-        },
-        ast::Type::Array { inner } => TypeRef::Array {
-            inner: Box::new(make_type_ref(inner)),
-        },
-        ast::Type::Generic { inner, parameters } => TypeRef::Generic {
-            inner: Box::new(make_type_ref(inner)),
-            parameters: parameters.iter().map(make_type_ref).collect(),
-        },
-    }
-}
 
 /// Represents a complete RPC protocol definition.
 ///
@@ -115,16 +98,93 @@ pub struct Method {
     /// This is typically a snake_case transformation of `name`.
     pub path: String,
 
+    /// The HTTP method used to transport the method call.
+    pub http_method: String,
+
+    /// The semantic type of the method.
+    ///
+    /// This determines how the method is treated by consumers and how
+    /// client code is generated (e.g. query vs mutation vs stream).
+    pub kind: MethodKind,
+
     /// Parameters accepted by the method.
     ///
     /// These are serialized into the request body as JSON.
-    pub parameters: Vec<Parameter>,
+    pub parameters: BTreeMap<String, Parameter>,
 
     /// The return type of the method, if any.
     ///
     /// If present, the response body of a successful request
     /// is deserialized as this type.
     pub returns: Option<TypeRef>,
+}
+
+impl Method {
+    /// Creates protocol Method from it's AST representation.
+    ///
+    /// This will return a [`ProtocolError::DuplicateField`] when there are multiple fields sharing
+    /// the same name.
+    fn from_ast(value: &ast::MethodDefinition) -> Result<Self, ProtocolError> {
+        let mut parameters = BTreeMap::default();
+
+        for p in value.parameters.iter() {
+            if parameters.contains_key(&p.name.text) {
+                return Err(ProtocolError::DuplicateField);
+            }
+            parameters.insert(
+                p.name.text.clone(),
+                Parameter::new(&p.name.text, TypeRef::from(&p.ty)),
+            );
+        }
+
+        let http_method = match value.kind {
+            MethodKind::Mutation => "POST",
+            MethodKind::Query => "GET",
+            _ => panic!("method kind not supported"),
+        };
+
+        Ok(Self {
+            name: value.name.text.clone(),
+            path: value.name.text.to_case(Case::Snake),
+            kind: value.kind.clone(),
+            http_method: http_method.to_string(),
+            parameters,
+            returns: value.return_ty.as_ref().map(TypeRef::from),
+        })
+    }
+}
+
+/// Describes the semantic type of API method.
+///
+/// `MethodKind` is used to determine how a method behaves and how client code
+/// should be generated for it (e.g. React Query integration).
+///
+/// The method type is **semantic**, not transport-level:
+/// it describes *how the method should be treated by consumers*.
+///
+/// ## Variants
+///
+/// - [`Query`](MethodKind::Query)
+///   Represents a read-only operation with no side effects.
+///   Queries are typically cacheable and map to data-fetching primitives
+///   such as `useQuery` in React Query.
+///
+/// - [`Mutation`](MethodKind::Mutation)
+///   Represents a write or side-effecting operation.
+///   Mutations usually invalidate cached queries and map to primitives such
+///   as `useMutation`.
+///
+/// - [`Stream`](MethodKind::Stream)
+///   Represents a long-lived or continuous operation that emits multiple values
+///   over time (e.g. WebSocket, SSE, or gRPC streams).
+///   Streams are not cacheable and require subscription-based consumers.
+///
+/// This enum is intentionally transport-agnostic and focuses on API semantics.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub enum MethodKind {
+    Query,
+    Mutation,
+    Stream,
 }
 
 /// Represents a single parameter to an RPC method.
@@ -143,10 +203,10 @@ pub struct Parameter {
 }
 
 impl Parameter {
-    fn new(name: String, ty: TypeRef) -> Self {
+    fn new(name: &str, ty: TypeRef) -> Self {
         Self {
             serialized_name: name.to_case(Case::Snake),
-            name,
+            name: name.into(),
             ty,
         }
     }
@@ -276,4 +336,24 @@ pub enum TypeRef {
         /// Type parameters supplied to the generic.
         parameters: Vec<TypeRef>,
     },
+}
+
+impl From<&ast::Type> for TypeRef {
+    fn from(value: &ast::Type) -> Self {
+        match value {
+            ast::Type::Type { identifier } => TypeRef::Named {
+                name: identifier.text.clone(),
+            },
+            ast::Type::Optional { inner } => TypeRef::Optional {
+                inner: Box::new(TypeRef::from(inner.as_ref())),
+            },
+            ast::Type::Array { inner } => TypeRef::Array {
+                inner: Box::new(TypeRef::from(inner.as_ref())),
+            },
+            ast::Type::Generic { inner, parameters } => TypeRef::Generic {
+                inner: Box::new(TypeRef::from(inner.as_ref())),
+                parameters: parameters.iter().map(TypeRef::from).collect(),
+            },
+        }
+    }
 }

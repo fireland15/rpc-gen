@@ -1,4 +1,5 @@
 use super::token::{Span, Token};
+use crate::protocol::MethodKind;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ProtocolDefinition {
@@ -11,6 +12,7 @@ pub struct ProtocolDefinition {
 #[derive(Debug, PartialEq, Clone)]
 pub struct MethodDefinition {
     pub name: Identifier,
+    pub kind: MethodKind,
     pub parameters: Vec<MethodParameter>,
     pub return_ty: Option<Type>,
 }
