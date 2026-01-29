@@ -1,38 +1,47 @@
-scalar date = string
-scalar int = number
-scalar uuid = string
+scalar String = string
+scalar DateOnly = string
+scalar Int = number
+scalar Uuid = string
+
+enum Color {
+    Red
+    Blue
+    Green
+}
 
 model ChangePasswordResponse {
-    name    string
-    details string 
-    date    date   
+    name    String
+    details String
+    date    DateOnly
 }
 
 model SigninResponse {
-    errors string[]
+    errors String[]
 }
 
 model JournalEntry {
-    id uuid
-    title string
-    details string?
-    status int
-    createdOn date
-    updatedOn date
+    id Uuid
+    title String
+    details String?
+    status Int
+    createdOn DateOnly
+    updatedOn DateOnly
 }
 
-rpc Signin(username string, password string) SigninResponse
+mutation Signin(username String, password String) SigninResponse
 
-rpc Signout()
+mutation Signout()
 
-rpc ExtendSession()
+mutation ExtendSession()
 
-rpc ChangePassword(oldPassword string, newPassword string) ChangePasswordResponse
+mutation ChangePassword(oldPassword String, newPassword String) ChangePasswordResponse
 
-rpc CreateJournalEntry() JournalEntry
+mutation CreateJournalEntry() JournalEntry
 
 model UploadJournalEntryImageRequest {
-    journalEntryId int
+    journalEntryId Int
 }
 
-rpc UploadJournalEntryImage(request UploadJournalEntryImageRequest, image Upload)
+mutation UploadJournalEntryImage(request UploadJournalEntryImageRequest, image Int)
+
+query GetJournalEntry(id Uuid) JournalEntry

@@ -1,101 +1,179 @@
-package parser
+package parser_test
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/fireland15/rpc-gen/internal/parser"
+	"github.com/fireland15/rpc-gen/internal/schema"
 )
 
-func TestParserParsesModelDefinition(t *testing.T) {
-	source := `
-model Banans {
-	name string
-	stuff int[]
-}`
-	p, err := NewParser(strings.NewReader(source))
-	if err != nil {
-		t.Error(err)
+func TestParseScalar(t *testing.T) {
+	src := `
+		scalar UserId = string
+		scalar Count = number
+	`
+
+	s := mustParse(t, src)
+
+	userId, ok := s.TypeDef("UserId").(schema.Scalar)
+	if !ok {
+		t.Fatalf("UserId not parsed as scalar")
 	}
 
-	md, err := p.parseModelDefinition()
-	if err != nil {
-		t.Error(err)
+	if userId.SerializedType() != schema.JsonTypeString {
+		t.Errorf("expected UserId to serialize as string")
 	}
 
-	ExpectEqual(t, "model definition name", "Banans", md.Name)
-	ExpectEqual(t, "model definition field count", 2, len(md.Fields))
-
-	f := md.Fields[0]
-	if f.Name != "name" || f.Type.String() != "string" {
-		t.Error("field not parsed correctly")
+	count, ok := s.TypeDef("Count").(schema.Scalar)
+	if !ok {
+		t.Fatalf("Count not parsed as scalar")
 	}
 
-	f = md.Fields[1]
-	if f.Name != "stuff" || f.Type.String() != "int[]" {
-		t.Error("field not parsed correctly")
+	if count.SerializedType() != schema.JsonTypeNumber {
+		t.Errorf("expected Count to serialize as number")
 	}
 }
 
-func ExpectEqual[T comparable](t *testing.T, field string, expected T, actual T) {
-	if expected != actual {
-		t.Errorf("expected %s to be '%v', but got '%v'.", field, expected, actual)
-		t.Fail()
+func TestParseModel(t *testing.T) {
+	src := `
+		model User {
+			id UserId
+			name string
+			age number?
+			tags string[]
+		}
+	`
+
+	s := mustParse(t, src)
+
+	user, ok := s.TypeDef("User").(schema.Composite)
+	if !ok {
+		t.Fatalf("User not parsed as model")
+	}
+
+	fields := user.Fields()
+
+	if len(fields) != 4 {
+		t.Fatalf("expected 4 fields, got %d", len(fields))
+	}
+
+	assertField := func(name string, want schema.TypeRef) {
+		t.Helper()
+		f, ok := fields[name]
+		if !ok {
+			t.Fatalf("missing field %q", name)
+		}
+		if !schema.EqualTypeRef(f.Type(), want) {
+			t.Errorf("field %q has wrong type: %#v, wanted: %#v", name, f.Type(), want)
+		}
+	}
+
+	assertField("id", schema.NamedType("UserId"))
+	assertField("name", schema.NamedType("string"))
+	assertField("age", schema.Optional(schema.NamedType("number")))
+	assertField("tags", schema.Array(schema.NamedType("string")))
+}
+
+func TestParseEnum(t *testing.T) {
+	src := `
+		enum Role {
+			Admin
+			User
+			Guest
+		}
+	`
+
+	s := mustParse(t, src)
+
+	role, ok := s.TypeDef("Role").(schema.Enumeration)
+	if !ok {
+		t.Fatalf("Role not parsed as enum")
+	}
+
+	variants := role.Variants()
+	expectedVariantNames := []string{"Admin", "User", "Guest"}
+	expectedSerializedValues := []string{"ADMIN", "USER", "GUEST"}
+
+	if len(variants) != len(expectedSerializedValues) {
+		t.Fatalf("expected %d variants, got %d", len(expectedSerializedValues), len(variants))
+	}
+
+	for i, variant := range expectedVariantNames {
+		if variants[i].Name() != variant {
+			t.Errorf("expected variant %q, got %q", variant, variants[i].Name())
+		}
+	}
+
+	for i, v := range expectedSerializedValues {
+		if variants[i].SerializedValue() != v {
+			t.Errorf("variant %d: expected %q, got %q", i, v, variants[i])
+		}
 	}
 }
 
-func TestParserParsesRpcDefinition(t *testing.T) {
-	source := `
-rpc Do(data Soemthing, data2 int) void`
+func TestParseQuery(t *testing.T) {
+	src := `
+		query getUser(id UserId) User
+	`
 
-	p, err := NewParser(strings.NewReader(source))
-	if err != nil {
-		t.Error(err)
+	s := mustParse(t, src)
+
+	m := s.Method("getUser")
+	if m == nil {
+		t.Fatalf("method getUser not found")
 	}
 
-	def, err := p.parseRpcDefinition()
-	if err != nil {
-		t.Error(err)
+	if m.Kind() != schema.MethodKindQuery {
+		t.Errorf("expected query method")
 	}
 
-	if def.Name != "Do" {
-		t.Error("rpc definition name not parsed correctly")
+	args := m.Arguments()
+	if len(args) != 1 {
+		t.Fatalf("expected 1 argument, got %d", len(args))
 	}
 
-	if def.Parameters[0].Name != "data" || def.Parameters[0].Type.String() != "Soemthing" {
-		t.Error("rpc parameter type name not parsed correctly")
+	if args["id"].Type().(schema.NamedTypeRef).Name() != "UserId" {
+		t.Errorf("wrong argument type")
 	}
 
-	if def.ReturnType.String() != "void" {
-		t.Error("rpc response type name not parsed correctly")
+	if m.ReturnType().(schema.NamedTypeRef).Name() != "User" {
+		t.Errorf("wrong return type")
 	}
 }
 
-func TestParserParsesFullRpcFile(t *testing.T) {
-	source := `
-model SignInRequest {
-	username string
-	password string
+func TestNestedTypes(t *testing.T) {
+	src := `
+		model Example {
+			values string[]?
+			matrix number[][] 
+		}
+	`
+
+	s := mustParse(t, src)
+
+	ex, _ := s.TypeDef("Example").(schema.Composite)
+
+	values, _ := ex.Fields()["values"]
+	want := schema.Optional(schema.Array(schema.NamedType("string")))
+
+	if !schema.EqualTypeRef(values.Type(), want) {
+		t.Errorf("unexpected type for values")
+	}
 }
 
-model SignInResponse {
-	token string
-	expires instant
-}
-	
-rpc SignIn(request SignInRequest) SignInResponse
+func mustParse(t *testing.T, input string) schema.Schema {
+	t.Helper()
 
-rpc SignOut() void`
-
-	p, err := NewParser(strings.NewReader(source))
+	p, err := parser.NewParser(strings.NewReader(input))
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("failed to create parser: %v", err)
 	}
 
-	def, err := p.Parse()
+	s, err := p.Parse()
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatalf("parse failed: %v", err)
 	}
 
-	ExpectEqual(t, "model count", 2, len(def.Types))
-	ExpectEqual(t, "rpc count", 2, len(def.Methods))
+	return s
 }

@@ -1,0 +1,118 @@
+{{ define "model" -}}
+namespace Test.Server.Models
+
+public record {{.Name}}
+{
+{{- range .Fields }}
+    [JsonPropertyName("{{ .JSONPropertyName }}")]
+    public {{ template "typeRef" .Type }} {{ toCase .Name "upperCamel" }} { get; init; }
+{{- end }}
+}
+{{ end }}
+
+
+
+{{ define "enum" -}}
+namespace Test.Server.Models.Enums
+
+public enum {{ toCase .Name "upperCamel" }}
+{
+{{- range .Variants }}
+    {{ toCase .Name "upperCamel" }} = "{{ .SerializedValue }}"
+{{- end }}
+}
+{{ end }}
+
+
+
+{{ define "interface" -}}
+namespace Test.Server.Abstractions
+
+public interface I{{ toCase .Name "upperCamel" }}Handler
+{
+    Task HandleAsync({{ template "interface_parameters" .Arguments }}CancellationToken cancellationToken = default);
+}
+{{ end }}
+
+
+
+{{ define "interface_parameters" }}
+{{- range . }}{{ template "typeRef" .Type }} {{ toCase .Name "camel" }}, {{ end -}}
+{{ end }}
+
+
+
+{{ define "minimal_api" }}
+namespace Test.Server.Web;
+
+public static class ProtocolEndpoints
+{
+    public static void MapProtocol(this WebApplication app)
+    {
+{{- range .Methods }}
+{{- if eq .Kind "query" }}
+        app.MapGet("{{ .Path }}", Handle{{ toCase .Name "upperCamel" }});
+{{- end }}
+{{- if eq .Kind "mutation" }}
+        app.MapPost("{{ .Path }}", Handle{{ toCase .Name "upperCamel" }});
+{{- end }}
+{{- end }}
+    }
+
+{{ range .Methods }}
+    private static Task<IResult> Handle{{ toCase .Name "upperCamel" }}(
+{{- $length := len .Arguments -}}
+{{- if gt $length 0 }}
+{{- if eq .Kind "mutation" }}
+        [FromBody] {{.Name}}Parameters parameters,
+{{- else if eq .Kind "query" }}
+{{- range .Arguments }}
+        [FromQuery(Name = "{{.JSONName}}")] {{ template "typeRef" .Type }} {{.Name}},
+{{- end }}
+{{- end }}
+{{- end }}
+        [FromServices] I{{.Name}}Handler handler,
+        CancellationToken cancellationToken))
+    {
+{{- if ne .ReturnType nil }}
+        var result = await handler.HandleAsync({{ range .Arguments }}parameters.{{ toCase .Name "upperCamel" }}, {{ end }}cancellationToken);
+        return Results.Ok(result);
+{{- else }}
+        await handler.HandleAsync({{ range .Arguments }}parameters.{{ toCase .Name "upperCamel" }}, {{ end }}cancellationToken);
+        return Results.NoContent();
+{{- end }}
+    }
+{{ end }}
+}
+{{ end }}
+
+
+
+{{ define "typeRef" -}}
+{{ $split := splitTypeRef . }}
+{{- if eq $split.Type "named" -}}
+    {{template "named" $split.Data}}
+{{- else if eq $split.Type "optional" -}}
+    {{template "optional" $split.Data}}
+{{- else if eq $split.Type "array" -}}
+    {{template "array" $split.Data}}
+{{- end -}}
+{{- end }}
+
+
+
+{{ define "named" -}}
+{{ resolveHostTypeRef . }}
+{{- end }}
+
+
+
+{{ define "optional" -}}
+{{ template "typeRef" .InnerType }}?
+{{- end }}
+
+
+
+{{ define "array" -}}
+{{ template "typeRef" .ElementType }}[]
+{{- end }}
