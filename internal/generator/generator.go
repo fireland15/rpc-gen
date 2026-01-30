@@ -20,17 +20,23 @@ type splitRefType struct {
 type LanguageConfig struct {
 	Scalars map[string]string `json:"scalars"`
 	Passes  []PassConfig      `json:"passes"`
+
+	// Inject is a dictionary of strings that can be pulled into templates
+	Inject map[string]string `json:"inject"`
 }
 
 type Generator struct {
-	t     *template.Template
-	funcs template.FuncMap
+	funcs    template.FuncMap
+	language string
+	inject   map[string]string
 }
 
 func Generate(language string, cfg LanguageConfig, s schema.Schema) error {
-	t := &template.Template{}
+	g := &Generator{
+		language: language,
+	}
 
-	funcs := template.FuncMap{
+	g.funcs = template.FuncMap{
 		"toCase": func(s string, c string) string {
 			switch c {
 			case "camel":
@@ -77,56 +83,37 @@ func Generate(language string, cfg LanguageConfig, s schema.Schema) error {
 			}
 			return n
 		},
-	}
-	t = t.Funcs(funcs)
-
-	templatePaths := fmt.Sprintf("templates/%s/*.template", language)
-	t, err := t.ParseFS(defaultTemplates, templatePaths)
-	if err != nil {
-		return err
-	}
-
-	g := &Generator{
-		t:     t,
-		funcs: funcs,
+		"lookup": func(key string) (string, error) {
+			v, ok := g.inject[key]
+			if !ok {
+				return "", fmt.Errorf("no such key in Inject: %s", key)
+			}
+			return v, nil
+		},
 	}
 
 	for _, pass := range cfg.Passes {
-		err = g.RenderPass(pass, s)
-		if err != nil {
+		inject := cfg.Inject
+		for k, v := range pass.Inject {
+			inject[k] = v
+		}
+		g.inject = inject
+		if err := g.RenderPass(pass, s); err != nil {
 			return err
 		}
 	}
 
 	return nil
-	//
-	//
-	//if err := t.ExecuteTemplate(os.Stdout, "preamble", s); err != nil {
-	//	return err
-	//}
-	//
-	//for ty := range s.TypeDefs() {
-	//	switch ty := ty.(type) {
-	//	case schema.Scalar:
-	//		if err := t.ExecuteTemplate(os.Stdout, "scalar", ty); err != nil {
-	//			return err
-	//		}
-	//	case schema.Enumeration:
-	//		if err := t.ExecuteTemplate(os.Stdout, "enumeration", ty); err != nil {
-	//			return err
-	//		}
-	//	case schema.Composite:
-	//		if err := t.ExecuteTemplate(os.Stdout, "composite", ty); err != nil {
-	//			return err
-	//		}
-	//	}
-	//}
-	//
-	//for method := range s.Methods() {
-	//	if err := t.ExecuteTemplate(os.Stdout, "method", method); err != nil {
-	//		return err
-	//	}
-	//}
+}
 
-	return nil
+func (g *Generator) getTemplate() (*template.Template, error) {
+	t := &template.Template{}
+	t = t.Funcs(g.funcs)
+
+	templatePaths := fmt.Sprintf("templates/%s/*.template", g.language)
+	t, err := t.ParseFS(defaultTemplates, templatePaths)
+	if err != nil {
+		return nil, err
+	}
+	return t, nil
 }

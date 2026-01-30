@@ -1,5 +1,6 @@
 {{ define "model" -}}
-namespace Test.Server.Models
+{{ lookup "usings" }}
+namespace {{ lookup "namespace" }};
 
 public record {{.Name}}
 {
@@ -13,12 +14,15 @@ public record {{.Name}}
 
 
 {{ define "enum" -}}
-namespace Test.Server.Models.Enums
+using System.Text.Json.Serialization;
+
+namespace {{ lookup "namespace" }};
 
 public enum {{ toCase .Name "upperCamel" }}
 {
 {{- range .Variants }}
-    {{ toCase .Name "upperCamel" }} = "{{ .SerializedValue }}"
+    [JsonStringEnumMemberName("{{ .SerializedValue }}")]
+    {{ toCase .Name "upperCamel" }},
 {{- end }}
 }
 {{ end }}
@@ -26,13 +30,25 @@ public enum {{ toCase .Name "upperCamel" }}
 
 
 {{ define "interface" -}}
-namespace Test.Server.Abstractions
+{{- lookup "usings" }}
+
+namespace {{ lookup "namespace" }};
 
 public interface I{{ toCase .Name "upperCamel" }}Handler
 {
-    Task HandleAsync({{ template "interface_parameters" .Arguments }}CancellationToken cancellationToken = default);
+    Task{{ template "interface_return" . }} HandleAsync({{ template "interface_parameters" .Arguments }}CancellationToken cancellationToken = default);
 }
 {{ end }}
+
+
+
+{{ define "interface_return" -}}
+{{- if ne .ReturnType nil -}}
+<{{ template "typeRef" .ReturnType }}>
+{{- else -}}
+
+{{- end -}}
+{{- end }}
 
 
 
@@ -42,8 +58,25 @@ public interface I{{ toCase .Name "upperCamel" }}Handler
 
 
 
+{{ define "methodParameter" -}}
+{{ lookup "usings" }}
+namespace {{ lookup "namespace" }};
+
+public record {{.Name}}Parameters
+{
+{{- range .Arguments }}
+    [JsonPropertyName("{{ .JSONName }}")]
+    public {{ template "typeRef" .Type }} {{ toCase .Name "upperCamel" }} { get; init; }
+{{- end }}
+}
+{{ end }}
+
+
+
 {{ define "minimal_api" }}
-namespace Test.Server.Web;
+{{- lookup "usings" }}
+
+namespace {{ lookup "namespace" }};
 
 public static class ProtocolEndpoints
 {
@@ -60,7 +93,7 @@ public static class ProtocolEndpoints
     }
 
 {{ range .Methods }}
-    private static Task<IResult> Handle{{ toCase .Name "upperCamel" }}(
+    private static async Task<IResult> Handle{{ toCase .Name "upperCamel" }}(
 {{- $length := len .Arguments -}}
 {{- if gt $length 0 }}
 {{- if eq .Kind "mutation" }}
@@ -72,19 +105,25 @@ public static class ProtocolEndpoints
 {{- end }}
 {{- end }}
         [FromServices] I{{.Name}}Handler handler,
-        CancellationToken cancellationToken))
+        CancellationToken cancellationToken)
     {
 {{- if ne .ReturnType nil }}
-        var result = await handler.HandleAsync({{ range .Arguments }}parameters.{{ toCase .Name "upperCamel" }}, {{ end }}cancellationToken);
+        var result = await handler.HandleAsync({{ template "args_into_interface" . }}cancellationToken);
         return Results.Ok(result);
 {{- else }}
-        await handler.HandleAsync({{ range .Arguments }}parameters.{{ toCase .Name "upperCamel" }}, {{ end }}cancellationToken);
+        await handler.HandleAsync({{ template "args_into_interface" . }}cancellationToken);
         return Results.NoContent();
 {{- end }}
     }
 {{ end }}
 }
 {{ end }}
+
+
+
+{{ define "args_into_interface" -}}
+{{ if eq .Kind "query" }}{{ range .Arguments }}{{ toCase .Name "camel" }}, {{ end }}{{ else }}{{ range .Arguments }}parameters.{{ toCase .Name "upperCamel" }}, {{ end }}{{ end }}
+{{- end }}
 
 
 

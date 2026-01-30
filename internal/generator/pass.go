@@ -33,6 +33,9 @@ type PassConfig struct {
 	//
 	// Available options are "scalar", "composite", "enum", or "method".
 	Items []string `json:"items"`
+
+	// Inject provides values to templates
+	Inject map[string]string `json:"inject"`
 }
 
 func (g *Generator) RenderPass(cfg PassConfig, s schema.Schema) error {
@@ -44,13 +47,18 @@ func (g *Generator) RenderPass(cfg PassConfig, s schema.Schema) error {
 }
 
 func (g *Generator) renderSingleFile(cfg PassConfig, s schema.Schema) error {
+	t, err := g.getTemplate()
+	if err != nil {
+		return fmt.Errorf("getting template: %w", err)
+	}
+
 	f, err := openFileForWrite("", cfg.Output)
 	if err != nil {
 		return fmt.Errorf("opening file for write: %w", err)
 	}
 	defer f.Close()
 
-	err = g.t.ExecuteTemplate(f, cfg.Template, s)
+	err = t.ExecuteTemplate(f, cfg.Template, s)
 	if err != nil {
 		return fmt.Errorf("executing template: %w", err)
 	}
@@ -79,13 +87,18 @@ func (g *Generator) renderItem(cfg PassConfig, item interface{}) error {
 		return fmt.Errorf("executing output template: %w", err)
 	}
 
+	t, err = g.getTemplate()
+	if err != nil {
+		return fmt.Errorf("getting template: %w", err)
+	}
+
 	f, err := openFileForWrite(cfg.Dir, buf.String())
 	if err != nil {
 		return fmt.Errorf("opening file for write: %w", err)
 	}
 	defer f.Close()
 
-	if err := g.t.ExecuteTemplate(f, cfg.Template, item); err != nil {
+	if err := t.ExecuteTemplate(f, cfg.Template, item); err != nil {
 		return fmt.Errorf("executing template %s: %w", cfg.Template, err)
 	}
 
@@ -137,6 +150,16 @@ func filtered(filter []string, iter iter.Seq[interface{}]) iter.Seq[interface{}]
 			matcher = func(x interface{}) bool {
 				if _, ok := x.(schema.Enumeration); ok {
 					return true
+				}
+				return next(x)
+			}
+		case "hasArgs":
+			matcher = func(x interface{}) bool {
+				if m, ok := x.(schema.Method); ok {
+					if len(m.Arguments()) > 0 {
+						return true
+					}
+					return false
 				}
 				return next(x)
 			}

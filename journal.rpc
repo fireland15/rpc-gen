@@ -25,7 +25,7 @@ model JournalEntry {
     details String?
     status Int
     createdOn DateOnly
-    updatedOn DateOnly
+    updatedOn DateOnly?
 }
 
 mutation Signin(username String, password String) SigninResponse
