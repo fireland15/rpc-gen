@@ -161,6 +161,103 @@ func TestNestedTypes(t *testing.T) {
 		t.Errorf("unexpected type for values")
 	}
 }
+func TestParseMethodDecorators(t *testing.T) {
+	src := `
+		@requires(authenticated, journal_write)
+		mutation CreateJournalEntry() JournalEntry
+	`
+
+	s := mustParse(t, src)
+
+	m := s.Method("CreateJournalEntry")
+	if m == nil {
+		t.Fatalf("method CreateJournalEntry not found")
+	}
+
+	decorators := m.Decorators()
+	if len(decorators) != 1 {
+		t.Fatalf("expected 1 decorator, got %d", len(decorators))
+	}
+
+	d := decorators[0]
+
+	if d.Name() != "requires" {
+		t.Errorf("expected decorator name 'requires', got %q", d.Name())
+	}
+
+	expectedArgs := []string{"authenticated", "journal_write"}
+	if len(d.Arguments()) != len(expectedArgs) {
+		t.Fatalf("expected %d decorator args, got %d", len(expectedArgs), len(d.Arguments()))
+	}
+
+	for i, arg := range expectedArgs {
+		if d.Arguments()[i] != arg {
+			t.Errorf("arg %d: expected %q, got %q", i, arg, d.Arguments()[i])
+		}
+	}
+}
+
+func TestParseMultipleMethodDecorators(t *testing.T) {
+	src := `
+		@requires(authenticated)
+		@rateLimit(user)
+		mutation UpdateProfile() User
+	`
+
+	s := mustParse(t, src)
+
+	m := s.Method("UpdateProfile")
+	if m == nil {
+		t.Fatalf("method UpdateProfile not found")
+	}
+
+	decorators := m.Decorators()
+	if len(decorators) != 2 {
+		t.Fatalf("expected 2 decorators, got %d", len(decorators))
+	}
+
+	if decorators[0].Name() != "requires" {
+		t.Errorf("expected first decorator 'requires', got %q", decorators[0].Name())
+	}
+	if len(decorators[0].Arguments()) != 1 || decorators[0].Arguments()[0] != "authenticated" {
+		t.Errorf("unexpected args for requires decorator: %#v", decorators[0].Arguments())
+	}
+
+	if decorators[1].Name() != "rateLimit" {
+		t.Errorf("expected second decorator 'rateLimit', got %q", decorators[1].Name())
+	}
+	if len(decorators[1].Arguments()) != 1 || decorators[1].Arguments()[0] != "user" {
+		t.Errorf("unexpected args for rateLimit decorator: %#v", decorators[1].Arguments())
+	}
+}
+
+func TestParseMethodDecoratorWithoutArgs(t *testing.T) {
+	src := `
+		@public
+		query HealthCheck()
+	`
+
+	s := mustParse(t, src)
+
+	m := s.Method("HealthCheck")
+	if m == nil {
+		t.Fatalf("method HealthCheck not found")
+	}
+
+	decorators := m.Decorators()
+	if len(decorators) != 1 {
+		t.Fatalf("expected 1 decorator, got %d", len(decorators))
+	}
+
+	d := decorators[0]
+	if d.Name() != "public" {
+		t.Errorf("expected decorator name 'public', got %q", d.Name())
+	}
+
+	if len(d.Arguments()) != 0 {
+		t.Errorf("expected no args for public decorator, got %#v", d.Arguments())
+	}
+}
 
 func mustParse(t *testing.T, input string) schema.Schema {
 	t.Helper()

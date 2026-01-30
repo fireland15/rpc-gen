@@ -23,6 +23,10 @@ const (
 	HTTPPost HTTPMethod = "POST"
 )
 
+////////////////////////////////
+// Method
+////////////////////////////////
+
 type Method interface {
 	// Name returns the logical name of the Method
 	Name() string
@@ -41,17 +45,12 @@ type Method interface {
 
 	// ReturnType returns the TypeRef for the methods return. Returns nil when there is not returned value.
 	ReturnType() TypeRef
-}
 
-type Argument interface {
-	// Name returns the logical name of the Argument
-	Name() string
+	// Decorators returns a slice of Decorator instances attached to the method
+	Decorators() []Decorator
 
-	// JSONName is the name of the argument as sent in JSON over the wire.
-	JSONName() string
-
-	// Type returns the TypeRef for the type of the Argument
-	Type() TypeRef
+	// AddDecorator adds a new decorator to the method
+	AddDecorator(Decorator)
 }
 
 type method struct {
@@ -59,16 +58,10 @@ type method struct {
 	arguments  map[string]*argument
 	kind       MethodKind
 	returnType TypeRef
-}
-
-type argument struct {
-	name     string
-	jsonName string
-	ty       TypeRef
+	decorators []Decorator
 }
 
 var _ Method = (*method)(nil)
-var _ Argument = (*argument)(nil)
 
 // NewMethod constructs a new Method with the given name and arguments.
 // Returns an error if name is empty or if there are duplicate argument names.
@@ -98,23 +91,7 @@ func NewMethod(name string, kind MethodKind, returnType TypeRef, arguments ...Ar
 		arguments:  argMap,
 		kind:       kind,
 		returnType: returnType,
-	}, nil
-}
-
-// NewArgument constructs a new Argument with the given name and TypeRef.
-// Automatically converts the name to lowerCamelCase for JSON.
-func NewArgument(name string, ty TypeRef) (Argument, error) {
-	if strings.TrimSpace(name) == "" {
-		return nil, errors.New("argument name cannot be empty")
-	}
-	if ty == nil {
-		return nil, errors.New("argument type cannot be nil")
-	}
-
-	return &argument{
-		name:     name,
-		jsonName: strcase.ToLowerCamel(name),
-		ty:       ty,
+		decorators: make([]Decorator, 0),
 	}, nil
 }
 
@@ -161,6 +138,54 @@ func (m *method) ReturnType() TypeRef {
 	return m.returnType
 }
 
+func (m *method) Decorators() []Decorator {
+	return m.decorators
+}
+
+func (m *method) AddDecorator(d Decorator) {
+	m.decorators = append(m.decorators, d)
+}
+
+////////////////////////////////
+// Argument
+////////////////////////////////
+
+type Argument interface {
+	// Name returns the logical name of the Argument
+	Name() string
+
+	// JSONName is the name of the argument as sent in JSON over the wire.
+	JSONName() string
+
+	// Type returns the TypeRef for the type of the Argument
+	Type() TypeRef
+}
+
+type argument struct {
+	name     string
+	jsonName string
+	ty       TypeRef
+}
+
+var _ Argument = (*argument)(nil)
+
+// NewArgument constructs a new Argument with the given name and TypeRef.
+// Automatically converts the name to lowerCamelCase for JSON.
+func NewArgument(name string, ty TypeRef) (Argument, error) {
+	if strings.TrimSpace(name) == "" {
+		return nil, errors.New("argument name cannot be empty")
+	}
+	if ty == nil {
+		return nil, errors.New("argument type cannot be nil")
+	}
+
+	return &argument{
+		name:     name,
+		jsonName: strcase.ToLowerCamel(name),
+		ty:       ty,
+	}, nil
+}
+
 // Name implements Argument
 func (a *argument) Name() string {
 	return a.name
@@ -174,4 +199,46 @@ func (a *argument) JSONName() string {
 // Type implements Argument
 func (a *argument) Type() TypeRef {
 	return a.ty
+}
+
+////////////////////////////////
+// Decorator
+////////////////////////////////
+
+type Decorator interface {
+	// Name returns the logical name of the Decorator.
+	Name() string
+
+	// Arguments returns the comma separated values passed to the decorator.
+	Arguments() []string
+}
+
+type decorator struct {
+	name      string
+	arguments []string
+}
+
+var _ Decorator = (*decorator)(nil)
+
+func NewDecorator(name string, arguments []string) (Decorator, error) {
+	if strings.TrimSpace(name) == "" {
+		return nil, errors.New("decorator name cannot be empty")
+	}
+	for idx, arg := range arguments {
+		if arg == "" {
+			return nil, fmt.Errorf("argument %d, cannot be empty", idx)
+		}
+	}
+	return &decorator{
+		name:      name,
+		arguments: arguments,
+	}, nil
+}
+
+func (d decorator) Name() string {
+	return d.name
+}
+
+func (d decorator) Arguments() []string {
+	return d.arguments
 }

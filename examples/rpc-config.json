@@ -6,7 +6,8 @@
         "String": "string",
         "DateOnly": "string",
         "Int": "number",
-        "Uuid": "string"
+        "Uuid": "string",
+        "Bool": "boolean"
       },
       "Passes": [
         {
@@ -20,7 +21,8 @@
         "String": "string",
         "DateOnly": "DateOnly",
         "Int": "int",
-        "Uuid": "Guid"
+        "Uuid": "Guid",
+        "Bool": "bool"
       },
       "Passes": [
         {

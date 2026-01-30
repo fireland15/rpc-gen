@@ -6,7 +6,7 @@ public record {{.Name}}
 {
 {{- range .Fields }}
     [JsonPropertyName("{{ .JSONPropertyName }}")]
-    public {{ template "typeRef" .Type }} {{ toCase .Name "upperCamel" }} { get; init; }
+    public {{if isOptional .Type}}{{else}}required {{end}}{{ template "typeRef" .Type }} {{ toCase .Name "upperCamel" }} { get; init; }
 {{- end }}
 }
 {{ end }}
@@ -66,7 +66,7 @@ public record {{.Name}}Parameters
 {
 {{- range .Arguments }}
     [JsonPropertyName("{{ .JSONName }}")]
-    public {{ template "typeRef" .Type }} {{ toCase .Name "upperCamel" }} { get; init; }
+    public {{if isOptional .Type}}{{else}}required {{end}}{{ template "typeRef" .Type }} {{ toCase .Name "upperCamel" }} { get; init; }
 {{- end }}
 }
 {{ end }}
@@ -84,11 +84,14 @@ public static class ProtocolEndpoints
     {
 {{- range .Methods }}
 {{- if eq .Kind "query" }}
-        app.MapGet("{{ .Path }}", Handle{{ toCase .Name "upperCamel" }});
+        app.MapGet("{{ .Path }}", Handle{{ toCase .Name "upperCamel" }})
 {{- end }}
 {{- if eq .Kind "mutation" }}
-        app.MapPost("{{ .Path }}", Handle{{ toCase .Name "upperCamel" }});
+        app.MapPost("{{ .Path }}", Handle{{ toCase .Name "upperCamel" }})
 {{- end }}
+{{- if hasDecorator . "authorize" }}
+            .RequireAuthorization()
+{{- end }};
 {{- end }}
     }
 

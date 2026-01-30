@@ -178,7 +178,20 @@ func (t *Tokenizer) Next() (Token, bool) {
 			err := t.source.Bump()
 			return Token{
 				Type: TokenTypeEquals,
-				Text: "]",
+				Text: "=",
+				Span: Span{
+					Start: start,
+					End:   start,
+				},
+			}, err != nil
+		}
+
+		if t.source.Current() == '@' {
+			start := t.source.Position()
+			err := t.source.Bump()
+			return Token{
+				Type: TokenTypeAt,
+				Text: "@",
 				Span: Span{
 					Start: start,
 					End:   start,

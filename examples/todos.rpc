@@ -1,3 +1,15 @@
 scalar String = string
+scalar Bool = bool
+scalar Int = number
+
+model Todo {
+    Id Int
+}
+
+mutation ChangePassword(oldPassword String, newPassword String) Bool
 
 mutation Login(username String, password String)
+
+query GetTodos() Todo[]
+
+query GetTodo(id Int) Todo

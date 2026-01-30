@@ -19,6 +19,9 @@ const (
 	TokenTypeQuestion
 	TokenTypeComma
 	TokenTypeEquals
+
+	// TokenTypeAt encodes '@'
+	TokenTypeAt
 )
 
 func (tt TokenType) String() string {

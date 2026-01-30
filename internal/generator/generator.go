@@ -90,6 +90,22 @@ func Generate(language string, cfg LanguageConfig, s schema.Schema) error {
 			}
 			return v, nil
 		},
+		"hasDecorator": func(method schema.Method, name string) bool {
+			for _, d := range method.Decorators() {
+				if d.Name() == name {
+					return true
+				}
+			}
+			return false
+		},
+		"isOptional": func(typeRef schema.TypeRef) bool {
+			switch typeRef.(type) {
+			case schema.OptionalTypeRef:
+				return true
+			default:
+				return false
+			}
+		},
 	}
 
 	for _, pass := range cfg.Passes {

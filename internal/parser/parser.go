@@ -103,6 +103,44 @@ func (p *Parser) Parse() (schema.Schema, error) {
 				slog.Error("parse error", slog.Any("err", err))
 			}
 			continue
+		} else if tok.Type == lexing.TokenTypeAt {
+			decorators, err := p.parseDecorators()
+			if err != nil {
+				continue
+			}
+
+			tok, err := p.tokens.Lookahead(0)
+			if err != nil {
+				continue
+			}
+
+			var md schema.Method
+			switch tok.Text {
+			case string(KwQuery):
+				md, err = p.parseRpcDefinition(KwQuery)
+			case string(KwMutation):
+				md, err = p.parseRpcDefinition(KwMutation)
+			case string(KwStream):
+				md, err = p.parseRpcDefinition(KwStream)
+			default:
+				parseErrors = append(parseErrors,
+					fmt.Sprintf("(%d:%d): decorator not attached to method",
+						tok.Span.Start.Line, tok.Span.Start.Column))
+				continue
+			}
+
+			if err != nil {
+				continue
+			}
+
+			for _, d := range decorators {
+				md.AddDecorator(d)
+			}
+
+			if err := def.AddMethod(md); err != nil {
+				slog.Error("parse error", slog.Any("err", err))
+			}
+			continue
 		} else {
 			msg := fmt.Sprintf("(%d:%d): expected keyword \"model\" or \"rpc\", but got \"%s\" instead", tok.Span.Start.Line, tok.Span.Start.Column, tok.Type)
 			parseErrors = append(parseErrors, msg)
@@ -396,6 +434,58 @@ func (p *Parser) parseModelFieldDefinition() (schema.Field, error) {
 	field := schema.NewField(fieldName, fieldType)
 
 	return field, nil
+}
+
+func (p *Parser) parseDecorators() ([]schema.Decorator, error) {
+	decorators := make([]schema.Decorator, 0)
+
+	for {
+		tok, err := p.tokens.Lookahead(0)
+		if err != nil || tok.Type != lexing.TokenTypeAt {
+			break
+		}
+
+		// consume '@'
+		p.tokens.Next()
+
+		name, err := p.parseIdentifier()
+		if err != nil {
+			return nil, err
+		}
+
+		args := make([]string, 0)
+
+		// optional argument list
+		if tok, _ := p.tokens.Lookahead(0); tok.Type == lexing.TokenTypeLeftParenthesis {
+			p.tokens.Next() // '('
+
+			for {
+				arg, err := p.parseIdentifier()
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, arg)
+
+				tok, err := p.tokens.Lookahead(0)
+				if err != nil || tok.Type != lexing.TokenTypeComma {
+					break
+				}
+				p.tokens.Next() // ','
+			}
+
+			if err := p.parseTokenType(lexing.TokenTypeRightParenthesis); err != nil {
+				return nil, err
+			}
+		}
+
+		d, err := schema.NewDecorator(name, args)
+		if err != nil {
+			return nil, err
+		}
+		decorators = append(decorators, d)
+	}
+
+	return decorators, nil
 }
 
 func (p *Parser) parseLeftBracket() error {

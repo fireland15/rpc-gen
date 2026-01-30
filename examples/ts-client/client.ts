@@ -61,7 +61,80 @@ function objectToQueryParams(obj: object) {
 
   return params.toString();
 }
+export type Bool = boolean;
+
+export type Int = number;
+
 export type String = string;
+
+export type Todo = {
+  id: Int;
+};
+
+export async function changePassword(newPassword: String, oldPassword: String, ctx?: RequestContext): Promise<Bool> {
+  const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
+
+  const headers = new Headers(init?.headers);
+  const req: RequestInit = {
+    ...init,
+    method: "POST",
+    headers,
+  };
+
+  const url = new URL("/change_password", baseUrl);
+
+  const data = {
+    newPassword,
+    oldPassword,
+  }
+
+  headers.set("Content-Type", "application/json");
+  req.body = JSON.stringify(data);
+
+  const response = await fetchFn(url.toString(), req);
+  return await parseJson<Bool>(response);
+}
+
+export async function getTodo(id: Int, ctx?: RequestContext): Promise<Todo> {
+  const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
+
+  const headers = new Headers(init?.headers);
+  const req: RequestInit = {
+    ...init,
+    method: "GET",
+    headers,
+  };
+
+  const url = new URL("/get_todo", baseUrl);
+
+  const data = {
+    id,
+  }
+
+  const queryParams = objectToQueryParams(data);
+  if (queryParams) {
+    url.search = queryParams;
+  }
+
+  const response = await fetchFn(url.toString(), req);
+  return await parseJson<Todo>(response);
+}
+
+export async function getTodos(ctx?: RequestContext): Promise<Todo[]> {
+  const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
+
+  const headers = new Headers(init?.headers);
+  const req: RequestInit = {
+    ...init,
+    method: "GET",
+    headers,
+  };
+
+  const url = new URL("/get_todos", baseUrl);
+
+  const response = await fetchFn(url.toString(), req);
+  return await parseJson<Todo[]>(response);
+}
 
 export async function login(password: String, username: String, ctx?: RequestContext): Promise<void> {
   const { baseUrl, fetch: fetchFn, init } = resolveContext(ctx);
