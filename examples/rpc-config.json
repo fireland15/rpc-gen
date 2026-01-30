@@ -1,0 +1,89 @@
+{
+  "definition": "todos.rpc",
+  "generators": {
+    "typescript": {
+      "Scalars": {
+        "String": "string",
+        "DateOnly": "string",
+        "Int": "number",
+        "Uuid": "string"
+      },
+      "Passes": [
+        {
+          "Template": "ts-client",
+          "Output": "ts-client/client.ts"
+        }
+      ]
+    },
+    "cs": {
+      "Scalars": {
+        "String": "string",
+        "DateOnly": "DateOnly",
+        "Int": "int",
+        "Uuid": "Guid"
+      },
+      "Passes": [
+        {
+          "Template": "model",
+          "Output": "{{.Name}}.cs",
+          "Dir": "RpcGen.Examples.Api/RpcGen.Examples/Models",
+          "Items": [
+            "composite"
+          ],
+          "Inject": {
+            "namespace": "RpcGen.Examples.Models"
+          }
+        },
+        {
+          "Template": "methodParameter",
+          "Output": "{{.Name}}Parameters.cs",
+          "Dir": "RpcGen.Examples.Api/RpcGen.Examples/Models",
+          "Items": [
+            "hasArgs"
+          ],
+          "Inject": {
+            "namespace": "RpcGen.Examples.Models"
+          }
+        },
+        {
+          "Template": "enum",
+          "Output": "{{.Name}}.cs",
+          "Dir": "RpcGen.Examples.Api/RpcGen.Examples/Models/Enums",
+          "Items": [
+            "enum"
+          ],
+          "Inject": {
+            "namespace": "RpcGen.Examples.Models.Enums"
+          }
+        },
+        {
+          "Template": "interface",
+          "Output": "I{{toCase .Name \"upperCamel\"}}Handler.cs",
+          "Dir": "RpcGen.Examples.Api/RpcGen.Examples/Endpoints/Abstractions",
+          "Items": [
+            "method"
+          ],
+          "Inject": {
+            "namespace": "RpcGen.Examples.Endpoints.Abstractions",
+            "usings": "using RpcGen.Examples.Models;\n"
+          }
+        },
+        {
+          "Template": "minimal_api",
+          "Output": "RpcGen.Examples.Api/RpcGen.Examples/Endpoints/Handlers.cs",
+          "Items": [
+            "method"
+          ],
+          "Inject": {
+            "namespace": "RpcGen.Examples.Endpoints",
+            "usings": "using Microsoft.AspNetCore.Mvc;\nusing RpcGen.Examples.Endpoints.Abstractions;\nusing RpcGen.Examples.Models;"
+          }
+        }
+      ],
+      "Inject": {
+        "namespace": "RpcGen.Examples",
+        "usings": "using System.Text.Json.Serialization;\n"
+      }
+    }
+  }
+}

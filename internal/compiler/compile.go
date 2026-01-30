@@ -10,13 +10,14 @@ import (
 )
 
 type Config struct {
+	Definition string                              `json:"definition"`
 	Generators map[string]generator.LanguageConfig `json:"generators"`
 }
 
-func Compile(definitionPath string, config Config) error {
-	definitionFile, err := os.Open(definitionPath)
+func Compile(config Config) error {
+	definitionFile, err := os.Open(config.Definition)
 	if err != nil {
-		err = fmt.Errorf("problem opening definition file '%s': %w", definitionPath, err)
+		err = fmt.Errorf("problem opening definition file '%s': %w", config.Definition, err)
 		return err
 	}
 

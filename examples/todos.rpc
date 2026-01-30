@@ -1,0 +1,3 @@
+scalar String = string
+
+mutation Login(username String, password String)
