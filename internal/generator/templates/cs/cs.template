@@ -18,6 +18,7 @@ using System.Text.Json.Serialization;
 
 namespace {{ lookup "namespace" }};
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum {{ toCase .Name "upperCamel" }}
 {
 {{- range .Variants }}
