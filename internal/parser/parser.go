@@ -61,6 +61,7 @@ func (p *Parser) Parse() (schema.Schema, error) {
 		} else if tok.Text == string(KwScalar) {
 			scalarDefinition, err := p.parseScalarDefinition()
 			if err != nil {
+				slog.Error(err.Error())
 				continue
 			}
 			if err := def.AddType(scalarDefinition); err != nil {
@@ -328,29 +329,7 @@ func (p *Parser) parseScalarDefinition() (schema.Scalar, error) {
 		return nil, err
 	}
 
-	err = p.parseTokenType(lexing.TokenTypeEquals)
-	if err != nil {
-		return nil, err
-	}
-
-	serializedTypeStr, err := p.parseIdentifier()
-	if err != nil {
-		return nil, err
-	}
-
-	var serializedType schema.JsonType
-	switch serializedTypeStr {
-	case "number":
-		serializedType = schema.JsonTypeNumber
-	case "bool":
-		serializedType = schema.JsonTypeBoolean
-	case "string":
-		serializedType = schema.JsonTypeString
-	default:
-		return nil, errors.New("unknown serialization type")
-	}
-
-	scalar, err := schema.NewScalar(name, serializedType)
+	scalar, err := schema.NewScalar(name, schema.JsonTypeString)
 	if err != nil {
 		return nil, err
 	}

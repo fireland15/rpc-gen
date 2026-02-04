@@ -80,6 +80,17 @@
             "namespace": "RpcGen.Examples.Endpoints",
             "usings": "using Microsoft.AspNetCore.Mvc;\nusing RpcGen.Examples.Endpoints.Abstractions;\nusing RpcGen.Examples.Models;"
           }
+        },
+        {
+          "Template": "client",
+          "Output": "RpcGen.Examples.Api/RpcGen.Examples/Client/Client.cs",
+          "Items": [
+            "method"
+          ],
+          "Inject": {
+            "namespace": "RpcGen.Examples.Endpoints.Client",
+            "usings": "using Microsoft.AspNetCore.Mvc;\nusing RpcGen.Examples.Endpoints.Abstractions;\nusing RpcGen.Examples.Models;"
+          }
         }
       ],
       "Inject": {

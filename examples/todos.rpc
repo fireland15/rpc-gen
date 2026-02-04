@@ -1,6 +1,6 @@
-scalar String = string
-scalar Bool = bool
-scalar Int = number
+scalar String
+scalar Bool
+scalar Int
 
 model Todo {
     Id Int
