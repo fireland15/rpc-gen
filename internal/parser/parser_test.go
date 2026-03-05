@@ -10,28 +10,20 @@ import (
 
 func TestParseScalar(t *testing.T) {
 	src := `
-		scalar UserId = string
-		scalar Count = number
+		scalar UserId
+		scalar Count
 	`
 
 	s := mustParse(t, src)
 
-	userId, ok := s.TypeDef("UserId").(schema.Scalar)
+	_, ok := s.TypeDef("UserId").(schema.Scalar)
 	if !ok {
 		t.Fatalf("UserId not parsed as scalar")
 	}
 
-	if userId.SerializedType() != schema.JsonTypeString {
-		t.Errorf("expected UserId to serialize as string")
-	}
-
-	count, ok := s.TypeDef("Count").(schema.Scalar)
+	_, ok = s.TypeDef("Count").(schema.Scalar)
 	if !ok {
 		t.Fatalf("Count not parsed as scalar")
-	}
-
-	if count.SerializedType() != schema.JsonTypeNumber {
-		t.Errorf("expected Count to serialize as number")
 	}
 }
 
@@ -114,7 +106,7 @@ func TestParseEnum(t *testing.T) {
 
 func TestParseQuery(t *testing.T) {
 	src := `
-		query getUser(id UserId) User
+		rpc getUser(id UserId) User
 	`
 
 	s := mustParse(t, src)
@@ -124,7 +116,7 @@ func TestParseQuery(t *testing.T) {
 		t.Fatalf("method getUser not found")
 	}
 
-	if m.Kind() != schema.MethodKindQuery {
+	if m.Kind() != schema.MethodKindRpc {
 		t.Errorf("expected query method")
 	}
 
@@ -164,7 +156,7 @@ func TestNestedTypes(t *testing.T) {
 func TestParseMethodDecorators(t *testing.T) {
 	src := `
 		@requires(authenticated, journal_write)
-		mutation CreateJournalEntry() JournalEntry
+		rpc CreateJournalEntry() JournalEntry
 	`
 
 	s := mustParse(t, src)
@@ -201,7 +193,7 @@ func TestParseMultipleMethodDecorators(t *testing.T) {
 	src := `
 		@requires(authenticated)
 		@rateLimit(user)
-		mutation UpdateProfile() User
+		rpc UpdateProfile() User
 	`
 
 	s := mustParse(t, src)
@@ -234,7 +226,7 @@ func TestParseMultipleMethodDecorators(t *testing.T) {
 func TestParseMethodDecoratorWithoutArgs(t *testing.T) {
 	src := `
 		@public
-		query HealthCheck()
+		rpc HealthCheck()
 	`
 
 	s := mustParse(t, src)

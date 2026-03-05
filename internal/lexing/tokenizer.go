@@ -20,7 +20,7 @@ func NewTokenizer(input io.Reader) (*Tokenizer, error) {
 	return &Tokenizer{source: rs}, nil
 }
 
-// returns the next token
+// Next returns the next token
 // the second value is true when at end of input
 func (t *Tokenizer) Next() (Token, bool) {
 	text := make([]rune, 0)

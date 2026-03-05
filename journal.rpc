@@ -1,7 +1,7 @@
-scalar String = string
-scalar DateOnly = string
-scalar Int = number
-scalar Uuid = string
+scalar String
+scalar DateOnly
+scalar Int
+scalar Uuid
 
 enum Color {
     Red
@@ -28,20 +28,20 @@ model JournalEntry {
     updatedOn DateOnly?
 }
 
-mutation Signin(username String, password String) SigninResponse
+rpc Signin(username String, password String) SigninResponse
 
-mutation Signout()
+rpc Signout()
 
-mutation ExtendSession()
+rpc ExtendSession()
 
-mutation ChangePassword(oldPassword String, newPassword String) ChangePasswordResponse
+rpc ChangePassword(oldPassword String, newPassword String) ChangePasswordResponse
 
-mutation CreateJournalEntry() JournalEntry
+rpc CreateJournalEntry() JournalEntry
 
 model UploadJournalEntryImageRequest {
     journalEntryId Int
 }
 
-mutation UploadJournalEntryImage(request UploadJournalEntryImageRequest, image Int)
+rpc UploadJournalEntryImage(request UploadJournalEntryImageRequest, image Int)
 
-query GetJournalEntry(id Uuid) JournalEntry
+rpc GetJournalEntry(id Uuid) JournalEntry

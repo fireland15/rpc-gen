@@ -69,14 +69,15 @@ public sealed class ProtocolClient : IProtocolClient
         int id,
         CancellationToken cancellationToken = default)
     {
-        var query = new Dictionary<string, string?>()
+        var payload = new GetTodoParameters
         {
-            ["id"] = id.ToString(),
+            Id = id,
         };
 
-        var uri = QueryHelpers.AddQueryString("/get_todo", query);
-
-        var response = await _http.GetAsync(uri, cancellationToken);
+        var response = await _http.PostAsJsonAsync(
+            "/get_todo",
+            payload,
+            cancellationToken);
 
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<Todo>(
@@ -89,9 +90,10 @@ public sealed class ProtocolClient : IProtocolClient
     public async Task<Todo[]> GetTodosAsync(
         CancellationToken cancellationToken = default)
     {
-        var uri = "/get_todos";
-
-        var response = await _http.GetAsync(uri, cancellationToken);
+        var response = await _http.PostAsync(
+            "/get_todos",
+            null,
+            cancellationToken);
 
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<Todo[]>(

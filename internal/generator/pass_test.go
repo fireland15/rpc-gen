@@ -27,10 +27,10 @@ func TestPassMultiFilter(t *testing.T) {
 	_ = s.AddType(e1)
 	_ = s.AddType(e2)
 
-	s1, _ := schema.NewScalar("Scalar", schema.JsonTypeString)
+	s1 := schema.NewScalar("Scalar")
 	_ = s.AddType(s1)
 
-	m, _ := schema.NewMethod("method", schema.MethodKindQuery, nil)
+	m, _ := schema.NewMethod("method", schema.MethodKindRpc, nil)
 	_ = s.AddMethod(m)
 
 	filteredItems := slices.Collect(filtered([]string{"enum", "scalar"}, s.Schema().Items()))

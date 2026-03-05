@@ -16,6 +16,31 @@
         }
       ]
     },
+    "go": {
+      "Scalars": {
+        "String": "string",
+        "DateOnly": "string",
+        "Int": "int",
+        "Uuid": "string",
+        "Bool": "bool"
+      },
+      "Passes": [
+        {
+          "Template": "models",
+          "Output": "{{toCase .Name \"snake\"}}.go",
+          "Dir": "go-echo/models",
+          "Items": [
+            "composite"
+          ],
+          "Inject": {
+            "package": "models"
+          }
+        }
+      ],
+      "Inject": {
+        "package": "server"
+      }
+    },
     "cs": {
       "Scalars": {
         "String": "string",

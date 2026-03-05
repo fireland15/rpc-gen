@@ -23,16 +23,16 @@ func TestNewMethodWithKindAndReturnType(t *testing.T) {
 		{
 			name:       "Query with return type",
 			methodName: "GetUser",
-			kind:       schema2.MethodKindQuery,
+			kind:       schema2.MethodKindRpc,
 			returnType: userType,
 			args:       []schema2.Argument{arg1},
 			wantErr:    false,
-			wantHTTP:   schema2.HTTPGet,
+			wantHTTP:   schema2.HTTPPost,
 		},
 		{
 			name:       "Mutation with return type",
 			methodName: "CreateUser",
-			kind:       schema2.MethodKindMutation,
+			kind:       schema2.MethodKindRpc,
 			returnType: userType,
 			args:       []schema2.Argument{arg1, arg2},
 			wantErr:    false,
@@ -50,7 +50,7 @@ func TestNewMethodWithKindAndReturnType(t *testing.T) {
 		{
 			name:       "Empty method name",
 			methodName: "",
-			kind:       schema2.MethodKindQuery,
+			kind:       schema2.MethodKindRpc,
 			returnType: nil,
 			args:       []schema2.Argument{},
 			wantErr:    true,
@@ -58,7 +58,7 @@ func TestNewMethodWithKindAndReturnType(t *testing.T) {
 		{
 			name:       "Duplicate schema.Arguments",
 			methodName: "DuplicateArgs",
-			kind:       schema2.MethodKindMutation,
+			kind:       schema2.MethodKindRpc,
 			returnType: nil,
 			args:       []schema2.Argument{arg1, arg1},
 			wantErr:    true,
@@ -66,7 +66,7 @@ func TestNewMethodWithKindAndReturnType(t *testing.T) {
 		{
 			name:       "Nil schema.Argument",
 			methodName: "NilArg",
-			kind:       schema2.MethodKindQuery,
+			kind:       schema2.MethodKindRpc,
 			returnType: nil,
 			args:       []schema2.Argument{nil},
 			wantErr:    true,
@@ -127,7 +127,7 @@ func TestArgumentJSONNameAndType(t *testing.T) {
 
 func TestMethodArgumentsImmutability(t *testing.T) {
 	arg1, _ := schema2.NewArgument("UserID", schema2.NamedType("string"))
-	m, _ := schema2.NewMethod("TestMethod", schema2.MethodKindQuery, nil, arg1)
+	m, _ := schema2.NewMethod("TestMethod", schema2.MethodKindRpc, nil, arg1)
 
 	args := m.Arguments()
 	args["UserID"] = nil // mutate returned map

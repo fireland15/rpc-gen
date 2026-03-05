@@ -11,9 +11,8 @@ import (
 type MethodKind string
 
 const (
-	MethodKindQuery    MethodKind = "query"
-	MethodKindMutation MethodKind = "mutation"
-	MethodKindStream   MethodKind = "stream"
+	MethodKindRpc    MethodKind = "rpc"
+	MethodKindStream MethodKind = "stream"
 )
 
 type HTTPMethod string
@@ -122,9 +121,7 @@ func (m *method) Kind() MethodKind {
 // HTTPMethod implements Method
 func (m *method) HTTPMethod() HTTPMethod {
 	switch m.kind {
-	case MethodKindQuery:
-		return HTTPGet
-	case MethodKindMutation:
+	case MethodKindRpc:
 		return HTTPPost
 	case MethodKindStream:
 		return HTTPPost

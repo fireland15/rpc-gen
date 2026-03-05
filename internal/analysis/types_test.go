@@ -10,7 +10,7 @@ import (
 
 func TestCheckTypeReferences_AllValid(t *testing.T) {
 	s := schema.NewSchema()
-	uuid, _ := schema.NewScalar("Uuid", schema.JsonTypeString)
+	uuid := schema.NewScalar("Uuid")
 	s.AddType(uuid)
 	colors, _ := schema.NewEnumeration("Colors", "red", "green", "blue")
 	s.AddType(colors)
@@ -23,7 +23,7 @@ func TestCheckTypeReferences_AllValid(t *testing.T) {
 	arg, _ := schema.NewArgument("id", schema.NamedType("Uuid"))
 	m, _ := schema.NewMethod(
 		"Exec",
-		schema.MethodKindQuery,
+		schema.MethodKindRpc,
 		schema.NamedType("Colors"),
 		arg)
 	s.AddMethod(m)
@@ -35,7 +35,7 @@ func TestCheckTypeReferences_AllValid(t *testing.T) {
 
 func TestCheckTypeReferences_MissingFieldType(t *testing.T) {
 	s := schema.NewSchema()
-	uuid, _ := schema.NewScalar("Uuid", schema.JsonTypeString)
+	uuid := schema.NewScalar("Uuid")
 	s.AddType(uuid)
 	colors, _ := schema.NewEnumeration("Colors", "red", "green", "blue")
 	s.AddType(colors)
@@ -56,7 +56,7 @@ func TestCheckTypeReferences_MissingFieldType(t *testing.T) {
 
 func TestCheckTypeReferences_MissingInnerOfOptionalFieldType(t *testing.T) {
 	s := schema.NewSchema()
-	uuid, _ := schema.NewScalar("Uuid", schema.JsonTypeString)
+	uuid := schema.NewScalar("Uuid")
 	s.AddType(uuid)
 	colors, _ := schema.NewEnumeration("Colors", "red", "green", "blue")
 	s.AddType(colors)
@@ -81,7 +81,7 @@ func TestCheckTypeReferences_MissingMethodReturnType(t *testing.T) {
 	arg, _ := schema.NewArgument("id", schema.NamedType("Uuid"))
 	m, _ := schema.NewMethod(
 		"Exec",
-		schema.MethodKindQuery,
+		schema.MethodKindRpc,
 		schema.NamedType("Colors"),
 		arg)
 	s.AddMethod(m)
@@ -104,7 +104,7 @@ func TestCheckTypeReferences_MissingMethodArgumentType(t *testing.T) {
 	arg, _ := schema.NewArgument("id", schema.NamedType("Uuid"))
 	m, _ := schema.NewMethod(
 		"Exec",
-		schema.MethodKindQuery,
+		schema.MethodKindRpc,
 		schema.NamedType("Colors"),
 		arg)
 	s.AddMethod(m)

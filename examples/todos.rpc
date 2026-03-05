@@ -6,10 +6,10 @@ model Todo {
     Id Int
 }
 
-mutation ChangePassword(oldPassword String, newPassword String) Bool
+rpc ChangePassword(oldPassword String, newPassword String) Bool
 
-mutation Login(username String, password String)
+rpc Login(username String, password String)
 
-query GetTodos() Todo[]
+rpc GetTodos() Todo[]
 
-query GetTodo(id Int) Todo
+rpc GetTodo(id Int) Todo

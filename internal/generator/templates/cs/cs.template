@@ -84,10 +84,7 @@ public static class ProtocolEndpoints
     public static void MapProtocol(this WebApplication app)
     {
 {{- range .Methods }}
-{{- if eq .Kind "query" }}
-        app.MapGet("{{ .Path }}", Handle{{ toCase .Name "upperCamel" }})
-{{- end }}
-{{- if eq .Kind "mutation" }}
+{{- if eq .Kind "rpc" }}
         app.MapPost("{{ .Path }}", Handle{{ toCase .Name "upperCamel" }})
 {{- end }}
 {{- if hasDecorator . "authorize" }}
@@ -100,12 +97,8 @@ public static class ProtocolEndpoints
     private static async Task<IResult> Handle{{ toCase .Name "upperCamel" }}(
 {{- $length := len .Arguments -}}
 {{- if gt $length 0 }}
-{{- if eq .Kind "mutation" }}
+{{- if eq .Kind "rpc" }}
         [FromBody] {{.Name}}Parameters parameters,
-{{- else if eq .Kind "query" }}
-{{- range .Arguments }}
-        [FromQuery(Name = "{{.JSONName}}")] {{ template "typeRef" .Type }} {{.Name}},
-{{- end }}
 {{- end }}
 {{- end }}
         [FromServices] I{{.Name}}Handler handler,
@@ -126,7 +119,7 @@ public static class ProtocolEndpoints
 
 
 {{ define "args_into_interface" -}}
-{{ if eq .Kind "query" }}{{ range .Arguments }}{{ toCase .Name "camel" }}, {{ end }}{{ else }}{{ range .Arguments }}parameters.{{ toCase .Name "upperCamel" }}, {{ end }}{{ end }}
+{{ range .Arguments }}parameters.{{ toCase .Name "upperCamel" }}, {{ end }}
 {{- end }}
 
 
@@ -200,23 +193,8 @@ public sealed class ProtocolClient : IProtocolClient
 {{- end }}
         CancellationToken cancellationToken = default)
     {
-{{- if eq .Kind "query" }}
-
+{{- if eq .Kind "rpc" }}
 {{- if gt (len .Arguments) 0 }}
-        var query = new Dictionary<string, string?>()
-        {
-{{- range .Arguments }}
-            ["{{ .JSONName }}"] = {{ toCase .Name "camel" }}{{ if isOptional .Type }}?.ToString(){{ else }}.ToString(){{ end }},
-{{- end }}
-        };
-
-        var uri = QueryHelpers.AddQueryString("{{ .Path }}", query);
-{{- else }}
-        var uri = "{{ .Path }}";
-{{- end }}
-
-        var response = await _http.GetAsync(uri, cancellationToken);
-{{- else if eq .Kind "mutation" }}
         var payload = new {{ .Name }}Parameters
         {
 {{- range .Arguments }}
@@ -228,6 +206,12 @@ public sealed class ProtocolClient : IProtocolClient
             "{{ .Path }}",
             payload,
             cancellationToken);
+{{- else }}
+        var response = await _http.PostAsync(
+            "{{ .Path }}",
+            null,
+            cancellationToken);
+{{- end }}
 {{- end }}
 
         response.EnsureSuccessStatusCode();

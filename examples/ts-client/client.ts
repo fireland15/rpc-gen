@@ -101,7 +101,7 @@ export async function getTodo(id: Int, ctx?: RequestContext): Promise<Todo> {
   const headers = new Headers(init?.headers);
   const req: RequestInit = {
     ...init,
-    method: "GET",
+    method: "POST",
     headers,
   };
 
@@ -111,10 +111,8 @@ export async function getTodo(id: Int, ctx?: RequestContext): Promise<Todo> {
     id,
   }
 
-  const queryParams = objectToQueryParams(data);
-  if (queryParams) {
-    url.search = queryParams;
-  }
+  headers.set("Content-Type", "application/json");
+  req.body = JSON.stringify(data);
 
   const response = await fetchFn(url.toString(), req);
   return await parseJson<Todo>(response);
@@ -126,7 +124,7 @@ export async function getTodos(ctx?: RequestContext): Promise<Todo[]> {
   const headers = new Headers(init?.headers);
   const req: RequestInit = {
     ...init,
-    method: "GET",
+    method: "POST",
     headers,
   };
 

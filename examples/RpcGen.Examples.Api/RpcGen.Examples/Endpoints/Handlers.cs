@@ -9,8 +9,8 @@ public static class ProtocolEndpoints
     public static void MapProtocol(this WebApplication app)
     {
         app.MapPost("/change_password", HandleChangePassword);
-        app.MapGet("/get_todo", HandleGetTodo);
-        app.MapGet("/get_todos", HandleGetTodos);
+        app.MapPost("/get_todo", HandleGetTodo);
+        app.MapPost("/get_todos", HandleGetTodos);
         app.MapPost("/login", HandleLogin);
     }
 
@@ -25,11 +25,11 @@ public static class ProtocolEndpoints
     }
 
     private static async Task<IResult> HandleGetTodo(
-        [FromQuery(Name = "id")] int id,
+        [FromBody] GetTodoParameters parameters,
         [FromServices] IGetTodoHandler handler,
         CancellationToken cancellationToken)
     {
-        var result = await handler.HandleAsync(id, cancellationToken);
+        var result = await handler.HandleAsync(parameters.Id, cancellationToken);
         return Results.Ok(result);
     }
 

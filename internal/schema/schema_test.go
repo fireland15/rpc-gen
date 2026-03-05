@@ -16,10 +16,7 @@ func TestNewSchema(t *testing.T) {
 func TestAddType_Success(t *testing.T) {
 	s := schema2.NewSchema()
 
-	scalar, err := schema2.NewScalar("String", schema2.JsonTypeString)
-	if err != nil {
-		t.Fatalf("unexpected error creating scalar: %v", err)
-	}
+	scalar := schema2.NewScalar("String")
 
 	if err := s.AddType(scalar); err != nil {
 		t.Fatalf("unexpected error adding type: %v", err)
@@ -29,7 +26,7 @@ func TestAddType_Success(t *testing.T) {
 func TestAddType_Duplicate(t *testing.T) {
 	s := schema2.NewSchema()
 
-	scalar, _ := schema2.NewScalar("String", schema2.JsonTypeString)
+	scalar := schema2.NewScalar("String")
 	if err := s.AddType(scalar); err != nil {
 		t.Fatalf("unexpected error adding type: %v", err)
 	}
@@ -45,7 +42,7 @@ func TestAddMethod_Success(t *testing.T) {
 	s := schema2.NewSchema()
 
 	// Create a simple method with no arguments and no return type
-	m, err := schema2.NewMethod("GetUser", schema2.MethodKindQuery, nil)
+	m, err := schema2.NewMethod("GetUser", schema2.MethodKindRpc, nil)
 	if err != nil {
 		t.Fatalf("unexpected error creating method: %v", err)
 	}
@@ -58,7 +55,7 @@ func TestAddMethod_Success(t *testing.T) {
 func TestAddMethod_Duplicate(t *testing.T) {
 	s := schema2.NewSchema()
 
-	m, _ := schema2.NewMethod("GetUser", schema2.MethodKindQuery, nil)
+	m, _ := schema2.NewMethod("GetUser", schema2.MethodKindRpc, nil)
 	if err := s.AddMethod(m); err != nil {
 		t.Fatalf("unexpected error adding method: %v", err)
 	}
@@ -74,7 +71,7 @@ func TestAddMultipleTypesAndMethods(t *testing.T) {
 	s := schema2.NewSchema()
 
 	// Add scalar
-	scalar, _ := schema2.NewScalar("Int", schema2.JsonTypeNumber)
+	scalar := schema2.NewScalar("Int")
 	if err := s.AddType(scalar); err != nil {
 		t.Fatalf("unexpected error adding scalar: %v", err)
 	}
@@ -86,8 +83,8 @@ func TestAddMultipleTypesAndMethods(t *testing.T) {
 	}
 
 	// Add methods
-	m1, _ := schema2.NewMethod("QueryUser", schema2.MethodKindQuery, nil)
-	m2, _ := schema2.NewMethod("UpdateUser", schema2.MethodKindMutation, nil)
+	m1, _ := schema2.NewMethod("QueryUser", schema2.MethodKindRpc, nil)
+	m2, _ := schema2.NewMethod("UpdateUser", schema2.MethodKindRpc, nil)
 
 	if err := s.AddMethod(m1); err != nil {
 		t.Fatalf("unexpected error adding method 1: %v", err)

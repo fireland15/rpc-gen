@@ -1,0 +1,58 @@
+{{ define "models" -}}
+package {{ lookup "package" }}
+
+type {{ .Name }} struct {
+{{- range .Fields }}
+    {{ toCase .Name "upperCamel" }} {{if isOptional .Type}}*{{else}}{{end}}{{ template "typeRef" .Type }} `json:"{{ .JSONPropertyName }}"`
+{{- end }}
+}
+
+{{ end }}
+
+
+
+{{ define "enum" }}
+package {{ lookup "package" }}
+
+type {{ .Name }} string
+
+{{ $name := .Name }}
+const (
+{{- range .Variants }}
+    {{ .Name }}
+{{- end }}
+)
+
+{{ end }}
+
+
+
+
+{{ define "typeRef" -}}
+{{ $split := splitTypeRef . }}
+{{- if eq $split.Type "named" -}}
+    {{template "named" $split.Data}}
+{{- else if eq $split.Type "optional" -}}
+    {{template "optional" $split.Data}}
+{{- else if eq $split.Type "array" -}}
+    {{template "array" $split.Data}}
+{{- end -}}
+{{- end }}
+
+
+
+{{ define "named" -}}
+{{ resolveHostTypeRef . }}
+{{- end }}
+
+
+
+{{ define "optional" -}}
+{{ template "typeRef" .InnerType }}?
+{{- end }}
+
+
+
+{{ define "array" -}}
+{{ template "typeRef" .ElementType }}[]
+{{- end }}

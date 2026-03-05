@@ -36,8 +36,7 @@ const (
 	KwScalar   Keyword = "scalar"
 	KwEnum     Keyword = "enum"
 	KwOptional Keyword = "optional"
-	KwQuery    Keyword = "query"
-	KwMutation Keyword = "mutation"
+	KwRpc      Keyword = "rpc"
 	KwStream   Keyword = "stream"
 )
 
@@ -77,17 +76,8 @@ func (p *Parser) Parse() (schema.Schema, error) {
 				slog.Error("parse error", slog.Any("err", err))
 			}
 			continue
-		} else if tok.Text == string(KwQuery) {
-			md, err := p.parseRpcDefinition(KwQuery)
-			if err != nil {
-				continue
-			}
-			if err := def.AddMethod(md); err != nil {
-				slog.Error("parse error", slog.Any("err", err))
-			}
-			continue
-		} else if tok.Text == string(KwMutation) {
-			md, err := p.parseRpcDefinition(KwMutation)
+		} else if tok.Text == string(KwRpc) {
+			md, err := p.parseRpcDefinition(KwRpc)
 			if err != nil {
 				continue
 			}
@@ -117,10 +107,8 @@ func (p *Parser) Parse() (schema.Schema, error) {
 
 			var md schema.Method
 			switch tok.Text {
-			case string(KwQuery):
-				md, err = p.parseRpcDefinition(KwQuery)
-			case string(KwMutation):
-				md, err = p.parseRpcDefinition(KwMutation)
+			case string(KwRpc):
+				md, err = p.parseRpcDefinition(KwRpc)
 			case string(KwStream):
 				md, err = p.parseRpcDefinition(KwStream)
 			default:
@@ -231,10 +219,8 @@ func (p *Parser) parseRpcDefinition(kw Keyword) (schema.Method, error) {
 
 func toMethodKind(kw Keyword) schema.MethodKind {
 	switch kw {
-	case KwQuery:
-		return schema.MethodKindQuery
-	case KwMutation:
-		return schema.MethodKindMutation
+	case KwRpc:
+		return schema.MethodKindRpc
 	case KwStream:
 		return schema.MethodKindStream
 	default:
@@ -329,10 +315,7 @@ func (p *Parser) parseScalarDefinition() (schema.Scalar, error) {
 		return nil, err
 	}
 
-	scalar, err := schema.NewScalar(name, schema.JsonTypeString)
-	if err != nil {
-		return nil, err
-	}
+	scalar := schema.NewScalar(name)
 
 	return scalar, nil
 }
@@ -520,9 +503,8 @@ func (p *Parser) parseKeyword(kw Keyword) error {
 
 func isKeyword(str string) bool {
 	return str == string(KwModel) ||
-		str == string(KwQuery) ||
+		str == string(KwRpc) ||
 		str == string(KwOptional) ||
-		str == string(KwMutation) ||
 		str == string(KwStream) ||
 		str == string(KwEnum)
 }
