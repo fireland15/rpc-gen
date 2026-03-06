@@ -99,8 +99,9 @@ export type RequestContext = Partial<Omit<RequestInit, "method" | "body">>  & {
 };
 
 async function parseJson<T>(response: Response): Promise<T> {
-  ensureSuccess(response);
-  return response.json() as Promise<T>;
+  await ensureSuccess(response);
+  const json = await response.json() as Promise<T>;
+  return json
 }
 
 async function ensureSuccess(response: Response) {
@@ -127,32 +128,6 @@ class ApiError extends Error {
   ) {
     super(`HTTP ${status}: ${body}`);
   }
-}
-
-function objectToQueryParams(obj: object) {
-  const params = new URLSearchParams();
-
-  for (const [key, value] of Object.entries(obj)) {
-    if (value === undefined || value === null) continue;
-
-    // Disallow nested objects (but allow arrays)
-    if (
-      typeof value === "object" &&
-      !Array.isArray(value)
-    ) {
-      throw new Error(
-        `Nested objects are not supported for query params (key: "${key}")`
-      );
-    }
-
-    if (Array.isArray(value)) {
-      value.forEach(v => params.append(key, v));
-    } else {
-      params.append(key, value);
-    }
-  }
-
-  return params.toString();
 }
 {{ end }}
 
